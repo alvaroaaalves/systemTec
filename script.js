@@ -1,4 +1,4 @@
-// Credenciais integradas do Supabase
+// Credenciais integradas do Supabase (URL corrigida)
 const SUPABASE_URL = 'https://ciumwhcahcekrryeppoi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdW13aGNhaGNla3JyeWVwcG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NjM5NTMsImV4cCI6MjEwMzMzOTk1M30.Rnq8Ob1kXwRr9jn7UcBF80Rh61hAxxVnABEXAD1sAKo';
 
@@ -29,30 +29,22 @@ function controlarExibicaoTela(session) {
     }
 }
 
-// Ação de Login com depuração detalhada
+// Ação de Login
 document.getElementById('formLogin').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login_email').value;
     const senha = document.getElementById('login_senha').value;
 
-    console.log("Tentando logar com:", email);
-    console.log("URL do Supabase:", SUPABASE_URL);
+    const { data, error } = await db.auth.signInWithPassword({
+        email: email,
+        password: senha,
+    });
 
-    try {
-        const { data, error } = await db.auth.signInWithPassword({
-            email: email,
-            password: senha,
-        });
-
-        if (error) {
-            console.error("Erro retornado pelo Supabase:", error);
-            alert('Erro ao fazer login: ' + error.message);
-        } else {
-            console.log("Login realizado com sucesso!", data);
-        }
-    } catch (err) {
-        console.error("Erro crítico na requisição (Fetch falhou):", err);
-        alert('Erro crítico de rede ao tentar conectar com o Supabase. Veja o Console (F12).');
+    if (error) {
+        console.error("Erro retornado pelo Supabase:", error);
+        alert('Erro ao fazer login: ' + error.message);
+    } else {
+        console.log("Login realizado com sucesso!", data);
     }
 });
 
