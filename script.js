@@ -29,19 +29,30 @@ function controlarExibicaoTela(session) {
     }
 }
 
-// Ação de Login
+// Ação de Login com depuração detalhada
 document.getElementById('formLogin').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login_email').value;
     const senha = document.getElementById('login_senha').value;
 
-    const { error } = await db.auth.signInWithPassword({
-        email: email,
-        password: senha,
-    });
+    console.log("Tentando logar com:", email);
+    console.log("URL do Supabase:", SUPABASE_URL);
 
-    if (error) {
-        alert('Erro ao fazer login: ' + error.message);
+    try {
+        const { data, error } = await db.auth.signInWithPassword({
+            email: email,
+            password: senha,
+        });
+
+        if (error) {
+            console.error("Erro retornado pelo Supabase:", error);
+            alert('Erro ao fazer login: ' + error.message);
+        } else {
+            console.log("Login realizado com sucesso!", data);
+        }
+    } catch (err) {
+        console.error("Erro crítico na requisição (Fetch falhou):", err);
+        alert('Erro crítico de rede ao tentar conectar com o Supabase. Veja o Console (F12).');
     }
 });
 
