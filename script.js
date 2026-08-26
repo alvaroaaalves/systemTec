@@ -1,5 +1,5 @@
 // Credenciais integradas do Supabase
-const SUPABASE_URL = 'https://ciumwhcahcekrryeppoip.supabase.co';
+const SUPABASE_URL = 'https://ciumwhcahcekrryeppoi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdW13aGNhaGNla3JyeWVwcG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NjM5NTMsImV4cCI6MjEwMzMzOTk1M30.Rnq8Ob1kXwRr9jn7UcBF80Rh61hAxxVnABEXAD1sAKo';
 
 // Usando 'db' para evitar qualquer conflito com o nome global da biblioteca
