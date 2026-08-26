@@ -2,15 +2,15 @@
 const SUPABASE_URL = 'https://ciumwhcahcekrryeppoip.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdW13aGNhaGNla3JyeWVwcG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NjM5NTMsImV4cCI6MjEwMzMzOTk1M30.Rnq8Ob1kXwRr9jn7UcBF80Rh61hAxxVnABEXAD1sAKo';
 
-// Inicialização corrigida do cliente Supabase (usando window.supabase para evitar conflito)
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Usando 'db' para evitar qualquer conflito com o nome global da biblioteca
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Verificar sessão ao carregar a página
 document.addEventListener("DOMContentLoaded", async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await db.auth.getSession();
     controlarExibicaoTela(session);
 
-    supabase.auth.onAuthStateChange((event, session) => {
+    db.auth.onAuthStateChange((event, session) => {
         controlarExibicaoTela(session);
     });
 });
@@ -35,7 +35,7 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
     const email = document.getElementById('login_email').value;
     const senha = document.getElementById('login_senha').value;
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await db.auth.signInWithPassword({
         email: email,
         password: senha,
     });
@@ -47,7 +47,7 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
 
 // Ação de Logout
 async function fazerLogout() {
-    await supabase.auth.signOut();
+    await db.auth.signOut();
 }
 
 // Obter coordenadas geográficas pelo Nominatim (OpenStreetMap)
@@ -86,7 +86,7 @@ document.getElementById('formTecnico').addEventListener('submit', async (e) => {
         ? document.getElementById('tec_ferramentas').value.split(',').map(i => i.trim())
         : [];
 
-    const { error } = await supabase.from('tecnicos').insert([{
+    const { error } = await db.from('tecnicos').insert([{
         nome: document.getElementById('tec_nome').value,
         cpf: document.getElementById('tec_cpf').value,
         cnpj: document.getElementById('tec_cnpj').value || null,
@@ -125,7 +125,7 @@ async function buscarTecnicoMaisProximo() {
         return;
     }
 
-    const { data: tecnicos, error } = await supabase.rpc('buscar_tecnicos_proximos', {
+    const { data: tecnicos, error } = await db.rpc('buscar_tecnicos_proximos', {
         lat_chamado: coordsChamado.lat,
         lon_chamado: coordsChamado.lon
     });
@@ -162,7 +162,7 @@ document.getElementById('formChamado').addEventListener('submit', async (e) => {
     const coords = await obterCoordenadas(rua, bairro, cidade, estado);
     const pontoGeo = coords ? `POINT(${coords.lon} ${coords.lat})` : null;
 
-    const { error } = await supabase.from('chamados').insert([{
+    const { error } = await db.from('chamados').insert([{
         titulo: document.getElementById('chamado_titulo').value,
         estado, cidade, bairro, rua,
         localizacao: pontoGeo,
@@ -183,7 +183,7 @@ async function carregarTecnicosSelect() {
     const select = document.getElementById('chamado_tecnico');
     if (!select) return;
     select.innerHTML = '<option value="">Selecione um técnico</option>';
-    const { data } = await supabase.from('tecnicos').select('id, nome, bairro');
+    const { data } = await db.from('tecnicos').select('id, nome, bairro');
     if (data) {
         data.forEach(t => {
             const opt = document.createElement('option');
@@ -204,7 +204,7 @@ async function gerarRelatorioCSV() {
         return;
     }
 
-    let query = supabase
+    let query = db
         .from('chamados')
         .select(`
             id,
