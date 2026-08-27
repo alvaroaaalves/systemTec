@@ -1,8 +1,8 @@
-// Credenciais integradas do Supabase (URL corrigida)
+// Credenciais integradas do Supabase
 const SUPABASE_URL = 'https://ciumwhcahcekrryeppoi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdW13aGNhaGNla3JyeWVwcG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NjM5NTMsImV4cCI6MjEwMzMzOTk1M30.Rnq8Ob1kXwRr9jn7UcBF80Rh61hAxxVnABEXAD1sAKo';
 
-// Usando 'db' para evitar qualquer conflito com o nome global da biblioteca
+// Inicialização do cliente Supabase
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Verificar sessão ao carregar a página
@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 });
 
+// Controla qual bloco aparece na tela (Login ou Painel)
 function controlarExibicaoTela(session) {
     const loginContainer = document.getElementById('login-container');
     const appContainer = document.getElementById('app-container');
@@ -35,16 +36,13 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
     const email = document.getElementById('login_email').value;
     const senha = document.getElementById('login_senha').value;
 
-    const { data, error } = await db.auth.signInWithPassword({
+    const { error } = await db.auth.signInWithPassword({
         email: email,
         password: senha,
     });
 
     if (error) {
-        console.error("Erro retornado pelo Supabase:", error);
         alert('Erro ao fazer login: ' + error.message);
-    } else {
-        console.log("Login realizado com sucesso!", data);
     }
 });
 
