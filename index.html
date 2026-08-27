@@ -7,19 +7,18 @@
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* Garante que a tela de login ocupe a altura inteira da tela com elegância */
         #login-container {
             min-height: 100vh;
             display: flex;
             align-items: center;
-            justify-content: background-color;
+            justify-content: center;
             background-color: #f8f9fa;
         }
     </style>
 </head>
 <body class="bg-light">
 
-    <!-- 1. TELA DE LOGIN (Visível por padrão) -->
+    <!-- 1. TELA DE LOGIN -->
     <div id="login-container" class="container-fluid">
         <div class="row w-100 justify-content-center">
             <div class="col-md-4">
@@ -43,9 +42,8 @@
         </div>
     </div>
 
-    <!-- 2. PAINEL PRINCIPAL / APP (Oculto até o login ser realizado) -->
+    <!-- 2. PAINEL PRINCIPAL COM DASHBOARD -->
     <div id="app-container" style="display: none;">
-        <!-- Barra de Navegação Superior -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
             <div class="container">
                 <a class="navbar-brand fw-bold" href="#">systemTec Painel</a>
@@ -54,11 +52,59 @@
         </nav>
 
         <div class="container pb-5">
+            
+            <!-- DASHBOARD DE RESUMO -->
+            <div class="row g-3 mb-4">
+                <div class="col-12"><h5 class="fw-bold text-secondary">📊 Resumo do Sistema</h5></div>
+                <!-- Cards de Chamados -->
+                <div class="col-md-3">
+                    <div class="card text-white bg-primary shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title">Total de Chamados</h6>
+                            <h3 id="dash_total_chamados" class="fw-bold mb-0">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title">Chamados Abertos</h6>
+                            <h3 id="dash_abertos" class="fw-bold mb-0">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-info shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title">Em Atendimento</h6>
+                            <h3 id="dash_atendimento" class="fw-bold mb-0">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-success shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title">Chamados Fechados</h6>
+                            <h3 id="dash_fechados" class="fw-bold mb-0">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <!-- Card de Técnicos -->
+                <div class="col-md-4">
+                    <div class="card text-white bg-dark shadow-sm">
+                        <div class="card-body">
+                            <h6 class="card-title">Total de Técnicos Cadastrados</h6>
+                            <h3 id="dash_total_tecnicos" class="fw-bold mb-0">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="mb-4">
+
             <div class="row g-4">
-                
                 <!-- Coluna Esquerda: Cadastros -->
                 <div class="col-lg-6">
-                    <!-- Cadastro de Técnico -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header bg-primary text-white">Cadastrar Técnico</div>
                         <div class="card-body">
@@ -90,12 +136,12 @@
 
                 <!-- Coluna Direita: Chamados e Relatórios -->
                 <div class="col-lg-6">
-                    <!-- Criar Chamado -->
                     <div class="card shadow-sm mb-4">
                         <div class="card-header bg-primary text-white">Criar Chamado</div>
                         <div class="card-body">
                             <form id="formChamado">
                                 <div class="mb-2"><input type="text" class="form-control" id="chamado_titulo" placeholder="Título do Chamado" required></div>
+                                <div class="mb-2"><textarea class="form-control" id="chamado_problema" placeholder="Descrição Detalhada do Problema" rows="2" required></textarea></div>
                                 <div class="row g-2 mb-2">
                                     <div class="col-md-4"><input type="text" class="form-control" id="chamado_estado" placeholder="Estado (UF)" required></div>
                                     <div class="col-md-8"><input type="text" class="form-control" id="chamado_cidade" placeholder="Cidade" required></div>
@@ -105,7 +151,7 @@
                                     <div class="col-md-6"><input type="text" class="form-control" id="chamado_rua" placeholder="Rua e Número" required></div>
                                 </div>
                                 
-                                <button type="button" class="btn btn-info btn-sm w-100 mb-2 text-white" onclick="buscarTecnicoMaisProximo()">🔍 Encontrar Técnico Mais Próximo</button>
+                                <button type="button" class="btn btn-info btn-sm w-100 mb-2 text-white" onclick="buscarTecnicoMaisProximo()">🔍 Encontrar Técnico Mais Próximo via Mapa</button>
 
                                 <div class="mb-3">
                                     <label class="form-label small text-muted">Técnico Alocado:</label>
@@ -136,14 +182,13 @@
                         </div>
                     </div>
                 </div>
-
             </div>
+
         </div>
     </div>
 
-    <!-- SDK do Supabase (Obrigatório vir antes do script.js) -->
+    <!-- SDK do Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Seu arquivo de script principal -->
     <script src="script.js"></script>
 </body>
 </html>
