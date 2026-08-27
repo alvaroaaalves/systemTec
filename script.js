@@ -2,10 +2,8 @@
 const SUPABASE_URL = 'https://ciumwhcahcekrryeppoi.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpdW13aGNhaGNla3JyeWVwcG9pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3NjM5NTMsImV4cCI6MjEwMzMzOTk1M30.Rnq8Ob1kXwRr9jn7UcBF80Rh61hAxxVnABEXAD1sAKo';
 
-// Inicialização do cliente Supabase
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Verificar sessão ao carregar a página
 document.addEventListener("DOMContentLoaded", async () => {
     const { data: { session } } = await db.auth.getSession();
     controlarExibicaoTela(session);
@@ -15,7 +13,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 });
 
-// Controla qual bloco aparece na tela (Login ou Painel)
 function controlarExibicaoTela(session) {
     const loginContainer = document.getElementById('login-container');
     const appContainer = document.getElementById('app-container');
@@ -23,6 +20,7 @@ function controlarExibicaoTela(session) {
     if (session) {
         loginContainer.style.display = 'none';
         appContainer.style.display = 'block';
+        carregarDadosDashboard();
         carregarTecnicosSelect();
     } else {
         loginContainer.style.display = 'flex';
@@ -46,12 +44,29 @@ document.getElementById('formLogin').addEventListener('submit', async (e) => {
     }
 });
 
-// Ação de Logout
 async function fazerLogout() {
     await db.auth.signOut();
 }
 
-// Obter coordenadas geográficas pelo Nominatim (OpenStreetMap)
+// Carregar Informações da Dashboard (Resumos)
+async function carregarDadosDashboard() {
+    // 1. Buscar Chamados
+    const { data: chamados, error: errChamados } = await db.from('chamados').select('status');
+    if (!errChamados && chamados) {
+        document.getElementById('dash_total_chamados').textContent = chamados.length;
+        document.getElementById('dash_abertos').textContent = chamados.filter(c => c.status === 'Criado' || c.status === 'Aberto').length;
+        document.getElementById('dash_atendimento').textContent = chamados.filter(c => c.status === 'Em Atendimento').length;
+        document.getElementById('dash_fechados').textContent = chamados.filter(c => c.status === 'Fechado' || c.status === 'Concluído').length;
+    }
+
+    // 2. Buscar Técnicos
+    const { data: tecnicos, error: errTecnicos } = await db.from('tecnicos').select('id');
+    if (!errTecnicos && tecnicos) {
+        document.getElementById('dash_total_tecnicos').textContent = tecnicos.length;
+    }
+}
+
+// Buscar coordenadas geográficas pelo Nominatim (OpenStreetMap)
 async function obterCoordenadas(rua, bairro, cidade, estado) {
     const enderecoCompleto = `${rua}, ${bairro}, ${cidade} - ${estado}, Brasil`;
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enderecoCompleto)}`;
@@ -105,10 +120,11 @@ document.getElementById('formTecnico').addEventListener('submit', async (e) => {
         alert('Técnico cadastrado com sucesso!');
         document.getElementById('formTecnico').reset();
         carregarTecnicosSelect();
+        carregarDadosDashboard();
     }
 });
 
-// 2. Buscar Técnico Mais Próximo
+// 2. Buscar Técnico Mais Próximo via Mapa
 async function buscarTecnicoMaisProximo() {
     const rua = document.getElementById('chamado_rua').value;
     const bairro = document.getElementById('chamado_bairro').value;
@@ -148,10 +164,10 @@ async function buscarTecnicoMaisProximo() {
     });
 
     select.value = tecnicos[0].id;
-    alert(`Técnico mais próximo selecionado: ${tecnicos[0].nome} (${tecnicos[0].distancia_km} km)!`);
+    alert(`Técnico mais próximo selecionado no mapa: ${tecnicos[0].nome} (${tecnicos[0].distancia_km} km)!`);
 }
 
-// 3. Criar Chamado
+// 3. Criar Chamado (Com Título e Problema)
 document.getElementById('formChamado').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -163,8 +179,10 @@ document.getElementById('formChamado').addEventListener('submit', async (e) => {
     const coords = await obterCoordenadas(rua, bairro, cidade, estado);
     const pontoGeo = coords ? `POINT(${coords.lon} ${coords.lat})` : null;
 
+    const tituloCompleto = `${document.getElementById('chamado_titulo').value} - Problema: ${document.getElementById('chamado_problema').value}`;
+
     const { error } = await db.from('chamados').insert([{
-        titulo: document.getElementById('chamado_titulo').value,
+        titulo: tituloCompleto,
         estado, cidade, bairro, rua,
         localizacao: pontoGeo,
         tecnico_id: document.getElementById('chamado_tecnico').value || null,
@@ -177,6 +195,7 @@ document.getElementById('formChamado').addEventListener('submit', async (e) => {
         alert('Chamado criado com sucesso!');
         document.getElementById('formChamado').reset();
         carregarTecnicosSelect();
+        carregarDadosDashboard();
     }
 });
 
@@ -234,7 +253,7 @@ async function gerarRelatorioCSV() {
         return;
     }
 
-    let csvContent = "ID;Titulo;Status;Data Criacao;Cidade;Bairro;Tecnico;Contato Tecnico;Nota Estrelas;Observacao Resolucao\n";
+    let csvContent = "ID;Titulo/Problema;Status;Data Criacao;Cidade;Bairro;Tecnico;Contato Tecnico;Nota Estrelas;Observacao Resolucao\n";
 
     data.forEach(item => {
         const id = item.id;
