@@ -3,183 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>systemTec - Login e Gestão</title>
+    <title>systemTec - Gestão de Serviços Técnicos</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Supabase JS Client -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Garante que a tela de login ocupe a altura inteira da tela com elegância */
+        #login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: background-color;
+            background-color: #f8f9fa;
+        }
+    </style>
 </head>
 <body class="bg-light">
 
-    <!-- TELA DE LOGIN (Visível apenas se deslogado) -->
-    <div id="login-container" class="container d-flex align-items-center justify-content-center" style="height: 100vh;">
-        <div class="card p-4 shadow-sm" style="width: 100%; max-width: 400px;">
-            <h2 class="h4 mb-3 text-center">systemTec — Entrar</h2>
-            <form id="formLogin">
-                <div class="mb-3">
-                    <label class="form-label">E-mail</label>
-                    <input type="email" class="form-control" id="login_email" required>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Senha</label>
-                    <input type="password" class="form-control" id="login_senha" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100">Entrar</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- PAINEL PRINCIPAL (Oculto por padrão até o login ser feito) -->
-    <div id="app-container" class="container py-4" style="display: none;">
-        <header class="pb-3 mb-4 border-bottom d-flex justify-content-between align-items-center">
-            <h1 class="h3">systemTec — Painel de Controle</h1>
-            <button class="btn btn-outline-danger btn-sm" onclick="fazerLogout()">Sair da Conta</button>
-        </header>
-
-        <!-- Navegação por Abas -->
-        <ul class="nav nav-tabs mb-4" id="myTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="tecnicos-tab" data-bs-toggle="tab" data-bs-target="#tecnicos-pane" type="button">Cadastrar Técnico</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="chamados-tab" data-bs-toggle="tab" data-bs-target="#chamados-pane" type="button">Gerenciar Chamados</button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="relatorios-tab" data-bs-toggle="tab" data-bs-target="#relatorios-pane" type="button">Relatórios</button>
-            </li>
-        </ul>
-
-        <div class="tab-content" id="myTabContent">
-            <!-- ABA 1: CADASTRO DE TÉCNICOS -->
-            <div class="tab-pane fade show active" id="tecnicos-pane" role="tabpanel">
-                <div class="card p-4 shadow-sm">
-                    <h3 class="h5 mb-3">Novo Técnico</h3>
-                    <form id="formTecnico">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Nome</label>
-                                <input type="text" class="form-control" id="tec_nome" required>
+    <!-- 1. TELA DE LOGIN (Visível por padrão) -->
+    <div id="login-container" class="container-fluid">
+        <div class="row w-100 justify-content-center">
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body p-4">
+                        <h3 class="text-center mb-4 fw-bold text-primary">systemTec</h3>
+                        <form id="formLogin">
+                            <div class="mb-3">
+                                <label for="login_email" class="form-label">E-mail</label>
+                                <input type="email" class="form-control" id="login_email" required>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">CPF</label>
-                                <input type="text" class="form-control" id="tec_cpf" required>
+                            <div class="mb-3">
+                                <label for="login_senha" class="form-label">Senha</label>
+                                <input type="password" class="form-control" id="login_senha" required>
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">CNPJ (Opcional)</label>
-                                <input type="text" class="form-control" id="tec_cnpj">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Estado</label>
-                                <input type="text" class="form-control" id="tec_estado" maxlength="2" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Cidade</label>
-                                <input type="text" class="form-control" id="tec_cidade" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Bairro</label>
-                                <input type="text" class="form-control" id="tec_bairro" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Rua e Nº</label>
-                                <input type="text" class="form-control" id="tec_rua" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Contato (Telefone)</label>
-                                <input type="text" class="form-control" id="tec_contato" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">E-mail</label>
-                                <input type="email" class="form-control" id="tec_email" required>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Ferramentas (separadas por vírgula)</label>
-                                <input type="text" class="form-control" id="tec_ferramentas" placeholder="Ex: Furadeira, Multímetro, Escada">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Observações sobre o Técnico</label>
-                                <textarea class="form-control" id="tec_obs" rows="2"></textarea>
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-primary">Salvar Técnico</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- ABA 2: GERENCIAR CHAMADOS -->
-            <div class="tab-pane fade" id="chamados-pane" role="tabpanel">
-                <div class="card p-4 shadow-sm mb-4">
-                    <h3 class="h5 mb-3">Abrir Novo Chamado</h3>
-                    <form id="formChamado">
-                        <div class="row g-3">
-                            <div class="col-md-12">
-                                <label class="form-label">Título / Descrição do Serviço</label>
-                                <input type="text" class="form-control" id="chamado_titulo" required>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">Estado (Local)</label>
-                                <input type="text" class="form-control" id="chamado_estado" maxlength="2" required>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Cidade (Local)</label>
-                                <input type="text" class="form-control" id="chamado_cidade" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Bairro (Local)</label>
-                                <input type="text" class="form-control" id="chamado_bairro" required>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Rua e Nº (Local)</label>
-                                <input type="text" class="form-control" id="chamado_rua" required>
-                            </div>
-                            <div class="col-12">
-                                <button type="button" class="btn btn-info text-white" onclick="buscarTecnicoMaisProximo()">
-                                    🔍 Buscar Técnico Mais Próximo (Calculando KM)
-                                </button>
-                            </div>
-                            <div class="col-md-12">
-                                <label class="form-label">Técnico Selecionado</label>
-                                <select class="form-select" id="chamado_tecnico">
-                                    <option value="">Selecione ou clique em buscar técnico próximo</option>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <button type="submit" class="btn btn-success">Criar Chamado</button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- ABA 3: RELATÓRIOS -->
-            <div class="tab-pane fade" id="relatorios-pane" role="tabpanel">
-                <div class="card p-4 shadow-sm">
-                    <h3 class="h5 mb-3">Exportar Relatório de Chamados</h3>
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label">Data Início</label>
-                            <input type="date" class="form-control" id="rel_data_inicio">
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label">Data Fim</label>
-                            <input type="date" class="form-control" id="rel_data_fim">
-                        </div>
-                        <div class="col-md-4">
-                            <button type="button" class="btn btn-dark w-100" onclick="gerarRelatorioCSV()">
-                                📥 Baixar Relatório (CSV / Excel)
-                            </button>
-                        </div>
+                            <button type="submit" class="btn btn-primary w-100 py-2">Entrar</button>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS Bundle -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- Script Principal -->
+    <!-- 2. PAINEL PRINCIPAL / APP (Oculto até o login ser realizado) -->
+    <div id="app-container" style="display: none;">
+        <!-- Barra de Navegação Superior -->
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+            <div class="container">
+                <a class="navbar-brand fw-bold" href="#">systemTec Painel</a>
+                <button class="btn btn-outline-light btn-sm" onclick="fazerLogout()">Sair (Logout)</button>
+            </div>
+        </nav>
+
+        <div class="container pb-5">
+            <div class="row g-4">
+                
+                <!-- Coluna Esquerda: Cadastros -->
+                <div class="col-lg-6">
+                    <!-- Cadastro de Técnico -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">Cadastrar Técnico</div>
+                        <div class="card-body">
+                            <form id="formTecnico">
+                                <div class="mb-2"><input type="text" class="form-control" id="tec_nome" placeholder="Nome Completo" required></div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6"><input type="text" class="form-control" id="tec_cpf" placeholder="CPF"></div>
+                                    <div class="col-md-6"><input type="text" class="form-control" id="tec_cnpj" placeholder="CNPJ (Opcional)"></div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4"><input type="text" class="form-control" id="tec_estado" placeholder="Estado (UF)" required></div>
+                                    <div class="col-md-8"><input type="text" class="form-control" id="tec_cidade" placeholder="Cidade" required></div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6"><input type="text" class="form-control" id="tec_bairro" placeholder="Bairro" required></div>
+                                    <div class="col-md-6"><input type="text" class="form-control" id="tec_rua" placeholder="Rua e Número" required></div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6"><input type="text" class="form-control" id="tec_contato" placeholder="Contato (WhatsApp/Tel)" required></div>
+                                    <div class="col-md-6"><input type="email" class="form-control" id="tec_email" placeholder="E-mail" required></div>
+                                </div>
+                                <div class="mb-2"><input type="text" class="form-control" id="tec_ferramentas" placeholder="Ferramentas (separadas por vírgula)"></div>
+                                <div class="mb-3"><textarea class="form-control" id="tec_obs" placeholder="Observações do Técnico"></textarea></div>
+                                <button type="submit" class="btn btn-success w-100">Salvar Técnico</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coluna Direita: Chamados e Relatórios -->
+                <div class="col-lg-6">
+                    <!-- Criar Chamado -->
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-header bg-primary text-white">Criar Chamado</div>
+                        <div class="card-body">
+                            <form id="formChamado">
+                                <div class="mb-2"><input type="text" class="form-control" id="chamado_titulo" placeholder="Título do Chamado" required></div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-4"><input type="text" class="form-control" id="chamado_estado" placeholder="Estado (UF)" required></div>
+                                    <div class="col-md-8"><input type="text" class="form-control" id="chamado_cidade" placeholder="Cidade" required></div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-md-6"><input type="text" class="form-control" id="chamado_bairro" placeholder="Bairro" required></div>
+                                    <div class="col-md-6"><input type="text" class="form-control" id="chamado_rua" placeholder="Rua e Número" required></div>
+                                </div>
+                                
+                                <button type="button" class="btn btn-info btn-sm w-100 mb-2 text-white" onclick="buscarTecnicoMaisProximo()">🔍 Encontrar Técnico Mais Próximo</button>
+
+                                <div class="mb-3">
+                                    <label class="form-label small text-muted">Técnico Alocado:</label>
+                                    <select class="form-select" id="chamado_tecnico">
+                                        <option value="">Selecione um técnico</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">Abrir Chamado</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Relatório CSV -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">Relatório de Chamados (CSV)</div>
+                        <div class="card-body">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6">
+                                    <label class="form-label small">Início:</label>
+                                    <input type="date" class="form-control" id="rel_data_inicio">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small">Fim:</label>
+                                    <input type="date" class="form-control" id="rel_data_fim">
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-dark w-100" onclick="gerarRelatorioCSV()">Baixar Relatório CSV</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- SDK do Supabase (Obrigatório vir antes do script.js) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Seu arquivo de script principal -->
     <script src="script.js"></script>
 </body>
 </html>
