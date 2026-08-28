@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>systemTec - Técnicos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="dashboard.html">systemTec Painel</a>
+            <div>
+                <a href="dashboard.html" class="btn btn-outline-light btn-sm me-2">🏠 Home (Dashboard)</a>
+                <button class="btn btn-outline-danger btn-sm" onclick="fazerLogout()">Sair</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <div class="row g-4">
+            <!-- Formulário de Cadastro -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">Cadastrar Novo Técnico</div>
+                    <div class="card-body">
+                        <form id="formTecnico">
+                            <div class="mb-2"><input type="text" class="form-control" id="tec_nome" placeholder="Nome Completo" required></div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6"><input type="text" class="form-control" id="tec_cpf" placeholder="CPF"></div>
+                                <div class="col-md-6"><input type="text" class="form-control" id="tec_cnpj" placeholder="CNPJ (Opcional)"></div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4"><input type="text" class="form-control" id="tec_estado" placeholder="Estado (UF)" required></div>
+                                <div class="col-md-8"><input type="text" class="form-control" id="tec_cidade" placeholder="Cidade" required></div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6"><input type="text" class="form-control" id="tec_bairro" placeholder="Bairro" required></div>
+                                <div class="col-md-6"><input type="text" class="form-control" id="tec_rua" placeholder="Rua e Número" required></div>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-6"><input type="text" class="form-control" id="tec_contato" placeholder="Contato (WhatsApp/Tel)" required></div>
+                                <div class="col-md-6"><input type="email" class="form-control" id="tec_email" placeholder="E-mail" required></div>
+                            </div>
+                            <div class="mb-2"><input type="text" class="form-control" id="tec_ferramentas" placeholder="Ferramentas (separadas por vírgula)"></div>
+                            <div class="mb-3"><textarea class="form-control" id="tec_obs" placeholder="Observações do Técnico"></textarea></div>
+                            <button type="submit" class="btn btn-success w-100">Salvar Técnico</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Técnicos Cadastrados -->
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">Técnicos Cadastrados</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Cidade/Bairro</th>
+                                        <th>Contato</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaTecnicosBody">
+                                    <!-- Preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>
