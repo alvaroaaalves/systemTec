@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>systemTec - Chamados</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="dashboard.html">systemTec Painel</a>
+            <div>
+                <a href="dashboard.html" class="btn btn-outline-light btn-sm me-2">🏠 Home (Dashboard)</a>
+                <button class="btn btn-outline-danger btn-sm" onclick="fazerLogout()">Sair</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <div class="row g-4">
+            <!-- Formulário de Abertura de Chamado -->
+            <div class="col-lg-5">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">Abrir Novo Chamado</div>
+                    <div class="card-body">
+                        <form id="formChamado">
+                            <div class="mb-2">
+                                <input type="text" class="form-control" id="chamado_titulo" placeholder="Título / Equipamento (ex: Impressora Loja 2)" required>
+                            </div>
+                            <div class="mb-2">
+                                <textarea class="form-control" id="chamado_problema" placeholder="Descrição do Problema" required></textarea>
+                            </div>
+
+                            <!-- Campo Único de Endereço Inteligente -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">Endereço do Atendimento</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="chamado_busca_endereco" placeholder="Digite a rua, bairro ou cidade...">
+                                    <button class="btn btn-outline-primary" type="button" onclick="selecionarEnderecoAutocomplete()">Buscar</button>
+                                </div>
+                                <small class="text-muted" style="font-size: 0.75rem;">Digite o endereço e clique em Buscar para preencher e achar o técnico mais próximo.</small>
+                            </div>
+
+                            <!-- Campos ocultos para salvar no banco perfeitamente -->
+                            <input type="hidden" id="chamado_rua">
+                            <input type="hidden" id="chamado_bairro">
+                            <input type="hidden" id="chamado_cidade">
+                            <input type="hidden" id="chamado_estado">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small text-muted">Técnico Responsável</label>
+                                <select class="form-select" id="chamado_tecnico">
+                                    <option value="">Selecione um técnico ou busque o endereço</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100">Criar Chamado</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lista de Chamados Recentes -->
+            <div class="col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">Chamados Recentes</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Título</th>
+                                        <th>Status</th>
+                                        <th>Cidade</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabelaChamadosBody">
+                                    <!-- Preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+</body>
+</html>
