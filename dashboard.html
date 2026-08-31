@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>systemTec - Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS (Mapa) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <!-- Estilos Personalizados -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+
+    <!-- Barra de Navegação -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="dashboard.html">systemTec</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item"><a class="nav-link active" href="dashboard.html">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="chamados.html">Chamados</a></li>
+                    <li class="nav-item"><a class="nav-link" href="tecnicos.html">Técnicos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="clientes.html">Clientes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="relatorios.html">Relatórios</a></li>
+                </ul>
+                <button class="btn btn-outline-light btn-sm" onclick="fazerLogout()">Sair</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <div class="container my-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="fw-bold text-dark">Painel de Controle</h2>
+                <p class="text-muted">Visão geral dos chamados e localização dos técnicos em tempo real.</p>
+            </div>
+        </div>
+
+        <!-- Cards de Métricas (Clicáveis com Filtro) -->
+        <div class="row mb-4">
+            <!-- Card Total -->
+            <div class="col-md-3 mb-3">
+                <a href="chamados.html" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 text-center py-3 bg-white h-100 hover-card">
+                        <h6 class="text-muted">Total de Chamados</h6>
+                        <h2 class="fw-bold text-dark mb-0" id="dash_total_chamados">0</h2>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Card Abertos (Criados) -->
+            <div class="col-md-3 mb-3">
+                <a href="chamados.html?status=Criado" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-primary border-4 h-100 hover-card">
+                        <h6 class="text-muted">Abertos</h6>
+                        <h2 class="fw-bold text-primary mb-0" id="dash_abertos">0</h2>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Card Em Atendimento -->
+            <div class="col-md-3 mb-3">
+                <a href="chamados.html?status=Em%20Atendimento" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-warning border-4 h-100 hover-card">
+                        <h6 class="text-muted">Em Atendimento</h6>
+                        <h2 class="fw-bold text-warning mb-0" id="dash_atendimento">0</h2>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Card Técnicos -->
+            <div class="col-md-3 mb-3">
+                <a href="tecnicos.html" class="text-decoration-none">
+                    <div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-success border-4 h-100 hover-card">
+                        <h6 class="text-muted">Técnicos Ativos</h6>
+                        <h2 class="fw-bold text-success mb-0" id="dash_total_tecnicos">0</h2>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Seção do Mapa -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold">Mapa de Chamados Georreferenciados</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="mapaChamados" style="height: 500px; width: 100%; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts Externos -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Leaflet JS (Mapa) -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Script Principal da Aplicação -->
+    <script src="script.js"></script>
+</body>
+</html>

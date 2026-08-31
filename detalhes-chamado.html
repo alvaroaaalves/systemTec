@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>systemTec - Detalhes do Chamado</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Estilos Personalizados -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-light">
+
+    <!-- Barra de Navegação Superior -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="dashboard.html">systemTec Painel</a>
+            <div class="d-flex">
+                <a href="chamados.html" class="btn btn-outline-light btn-sm me-2">&larr; Voltar para Chamados</a>
+                <button class="btn btn-outline-danger btn-sm" onclick="fazerLogout()">Sair</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <div class="container my-4">
+        <div class="row">
+            <!-- Coluna Esquerda: Edição de Dados do Chamado -->
+            <div class="col-md-5 mb-4">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold" id="tituloCardChamado">Editar Chamado</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="formEditarChamadoUnico">
+                            <input type="hidden" id="detalhe_id">
+                            
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Cliente</label>
+                                <select id="detalhe_cliente" class="form-select">
+                                    <option value="">Selecione o cliente...</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Filial</label>
+                                <input type="text" id="detalhe_filial" class="form-control" placeholder="Ex: Matriz, Centro, etc.">
+                            </div>
+
+                            <!-- Campo Único de Endereço (Busca + Salva Rua, Coordenadas e Mapa) -->
+                            <div class="mb-3 position-relative">
+                                <label class="form-label fw-bold">Endereço / Localização</label>
+                                <input type="text" id="detalhe_rua" class="form-control" placeholder="Digite a rua, número ou bairro..." onkeyup="sugerirEnderecosDetalhe(this.value)">
+                                <div id="sugestoesDetalhe" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1000;"></div>
+                                <input type="hidden" id="detalhe_lat">
+                                <input type="hidden" id="detalhe_lon">
+                                <input type="hidden" id="detalhe_estado">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Bairro</label>
+                                    <input type="text" id="detalhe_bairro" class="form-control">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-bold">Cidade</label>
+                                    <input type="text" id="detalhe_cidade" class="form-control">
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Título / Descrição do Problema</label>
+                                <textarea id="detalhe_titulo" class="form-control" rows="3"></textarea>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Status</label>
+                                <select id="detalhe_status" class="form-select">
+                                    <option value="Criado">Criado</option>
+                                    <option value="Em Atendimento">Em Atendimento</option>
+                                    <option value="Resolvido">Resolvido</option>
+                                    <option value="Validado">Validado</option>
+                                    <option value="Cancelado">Cancelado</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Técnico Responsável</label>
+                                <select id="detalhe_tecnico" class="form-select">
+                                    <option value="">Carregando...</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-success w-100">Salvar Alterações Gerais</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Direita: Histórico e Adição de Observações -->
+            <div class="col-md-7">
+                <!-- Adicionar Nova Observação -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold">Adicionar Nova Observação / Andamento</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="formNovaObservacao">
+                            <div class="mb-3">
+                                <textarea id="obs_texto" class="form-control" rows="3" placeholder="Digite o que foi feito, peças trocadas ou atualização do atendimento..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">Gravar Atualização (Com Data/Hora)</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Histórico de Atualizações -->
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold">Histórico de Atualizações</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="timelineHistorico" class="list-group list-group-flush">
+                            <p class="text-muted small text-center py-2">Carregando histórico...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts Externos -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Script Principal -->
+    <script src="script.js"></script>
+</body>
+</html>

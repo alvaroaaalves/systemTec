@@ -1,0 +1,134 @@
+:root {
+    --primary-color: #0f172a; 
+    --accent-color: #2563eb;  
+    --bg-light: #f8fafc;
+}
+
+/* Garante que o texto de todo o site seja visível por padrão */
+body {
+    background-color: var(--bg-light);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    color: #1e293b !important;
+}
+
+/* Corrige visibilidade de títulos, labels e textos gerais */
+h1, h2, h3, h4, h5, h6, label, p, span, div {
+    color: #1e293b;
+}
+
+.text-muted {
+    color: #64748b !important;
+}
+
+/* Navbar */
+.navbar {
+    background: var(--primary-color) !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand, .navbar-brand:hover {
+    color: #ffffff !important;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+    background-color: #ffffff;
+}
+
+.card-header {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e2e8f0;
+    font-weight: 600;
+    color: #1e293b !important;
+    border-top-left-radius: 12px !important;
+    border-top-right-radius: 12px !important;
+    padding: 1rem 1.25rem;
+}
+
+/* Botões */
+.btn-primary {
+    background-color: var(--accent-color);
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    color: #ffffff !important;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8;
+}
+
+.btn-success {
+    background-color: #059669;
+    border: none;
+    border-radius: 8px;
+    color: #ffffff !important;
+}
+
+.btn-success:hover {
+    background-color: #047857;
+}
+
+/* Campos de Formulário e Inputs */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    padding: 0.625rem 0.875rem;
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+}
+
+.form-control::placeholder {
+    color: #94a3b8 !important;
+    opacity: 1;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    background-color: #ffffff !important;
+    color: #1e293b !important;
+}
+
+/* Tabelas */
+.table th {
+    font-weight: 600;
+    color: #475569 !important;
+    background-color: #f1f5f9;
+    border-bottom: none;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table td {
+    vertical-align: middle;
+    padding: 0.875rem 0.75rem;
+    color: #1e293b !important;
+}
+
+/* Caixa de sugestões de endereço */
+#sugestoesTecnico, #sugestoesChamado {
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    margin-top: 4px;
+    background: #ffffff;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+#sugestoesTecnico .list-group-item, #sugestoesChamado .list-group-item {
+    border: none;
+    border-bottom: 1px solid #f1f5f9;
+    padding: 0.65rem 0.875rem;
+    background-color: #ffffff;
+    color: #1e293b !important;
+}
+
+#sugestoesTecnico .list-group-item:hover, #sugestoesChamado .list-group-item:hover {
+    background-color: #f1f5f9;
+    color: var(--accent-color) !important;
+}
