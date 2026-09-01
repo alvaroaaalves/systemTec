@@ -8,3 +8,5 @@ Sistema web para gestão de chamados técnicos, cadastro de profissionais com ge
 * **JavaScript (Vanilla)** (Lógica e requisições)
 * **Supabase / PostgreSQL + PostGIS** (Banco de dados e geolocalização)
 * **OpenStreetMap (Nominatim)** (Geocodificação gratuita de endereços)
+
+
