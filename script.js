@@ -287,7 +287,8 @@ async function inicializarMapaDashboard() {
         const coordenadas = extrairCoordenadasLocalizacao(c.localizacao);
         if (coordenadas && Number.isFinite(coordenadas.lat) && Number.isFinite(coordenadas.lon)) {
             const marker = L.marker([coordenadas.lat, coordenadas.lon], { icon: iconeMarcadorStatus(c.status) });
-            marker.bindPopup(`<b>Chamado #${c.id}</b><br>Cliente: ${escapeHTML(c.cliente || 'N/A')}<br>Status: ${escapeHTML(c.status || '')}<br>Cidade: ${escapeHTML(c.cidade || '')}`);
+            const detalheUrl = `detalhes-chamado.html?id=${encodeURIComponent(c.id)}`;
+            marker.bindPopup(`<b><a href="${detalheUrl}" class="text-decoration-none">Chamado #${escapeHTML(c.id)}</a></b><br>Cliente: ${escapeHTML(c.cliente || 'N/A')}<br>Status: ${escapeHTML(c.status || '')}<br>Cidade: ${escapeHTML(c.cidade || '')}<br><a href="${detalheUrl}" class="btn btn-sm btn-primary mt-2">Abrir detalhe</a>`);
             marcadoresDashboard.addLayer(marker);
             bounds.push([coordenadas.lat, coordenadas.lon]);
         }
