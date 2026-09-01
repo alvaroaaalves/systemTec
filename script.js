@@ -133,6 +133,42 @@ async function carregarDadosDashboard() {
     }
 }
 
+function extrairCoordenadasLocalizacao(valor) {
+    if (!valor) return null;
+
+    // Formato textual: POINT(longitude latitude)
+    if (typeof valor === 'string') {
+        const texto = valor.trim();
+        const matchWkt = texto.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i);
+        if (matchWkt) {
+            return { lon: parseFloat(matchWkt[1]), lat: parseFloat(matchWkt[2]) };
+        }
+
+        // Formato EWKB hexadecimal retornado pelo PostgREST/PostGIS.
+        const hex = texto.replace(/^\\x/i, '');
+        if (/^[0-9a-f]+$/i.test(hex) && hex.length >= 42) {
+            try {
+                const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                const view = new DataView(bytes.buffer);
+                const littleEndian = bytes[0] === 1;
+                const tipo = view.getUint32(1, littleEndian);
+                let offset = 5;
+
+                // EWKB com SRID: pula os 4 bytes do SRID antes de X/Y.
+                if ((tipo & 0x20000000) !== 0) offset += 4;
+                return {
+                    lon: view.getFloat64(offset, littleEndian),
+                    lat: view.getFloat64(offset + 8, littleEndian)
+                };
+            } catch (erro) {
+                console.error('Não foi possível interpretar a localização:', erro);
+            }
+        }
+    }
+
+    return null;
+}
+
 // Mapa Leaflet no Dashboard
 async function inicializarMapaDashboard() {
     const elementoMapa = document.getElementById('mapaChamados');
@@ -150,16 +186,11 @@ async function inicializarMapaDashboard() {
 
     let bounds = [];
     chamados.forEach(c => {
-        if (c.localizacao) {
-            const match = c.localizacao.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
-            if (match) {
-                const lon = parseFloat(match[1]);
-                const lat = parseFloat(match[2]);
-                
-                let marker = L.marker([lat, lon]).addTo(mapaDashboard);
-                marker.bindPopup(`<b>Chamado #${c.id}</b><br>Cliente: ${escapeHTML(c.cliente || 'N/A')}<br>Status: ${c.status}`);
-                bounds.push([lat, lon]);
-            }
+        const coordenadas = extrairCoordenadasLocalizacao(c.localizacao);
+        if (coordenadas && Number.isFinite(coordenadas.lat) && Number.isFinite(coordenadas.lon)) {
+            const marker = L.marker([coordenadas.lat, coordenadas.lon]).addTo(mapaDashboard);
+            marker.bindPopup(`<b>Chamado #${c.id}</b><br>Cliente: ${escapeHTML(c.cliente || 'N/A')}<br>Status: ${escapeHTML(c.status || '')}`);
+            bounds.push([coordenadas.lat, coordenadas.lon]);
         }
     });
 
@@ -786,6 +817,9 @@ async function inicializarDetalhesChamado() {
 
             const lat = document.getElementById('detalhe_lat')?.value;
             const lon = document.getElementById('detalhe_lon')?.value;
+            const campoEndereco = document.getElementById('detalhe_busca_endereco');
+            const enderecoAnterior = formEdit.dataset.enderecoAnterior || '';
+            const enderecoNovo = campoEndereco?.value?.trim() || '';
             
             let dadosUpdate = {
                 cliente: document.getElementById('detalhe_cliente').value,
@@ -810,10 +844,15 @@ async function inicializarDetalhesChamado() {
             if (error) {
                 Swal.fire('Erro', error.message, 'error');
             } else {
+                const observacoes = [`[Sistema] Dados do chamado atualizados.`];
+                if (enderecoAnterior && enderecoNovo && enderecoAnterior !== enderecoNovo) {
+                    observacoes.push(`[Sistema] Endereço alterado de: "${enderecoAnterior}" para: "${enderecoNovo}".`);
+                }
                 await db.from('historico_chamados').insert([{
                     chamado_id: id,
-                    observacao: `[Sistema] Dados do chamado atualizados.`
+                    observacao: observacoes.join(' ')
                 }]);
+                formEdit.dataset.enderecoAnterior = enderecoNovo;
                 Swal.fire('Sucesso', 'Chamado atualizado com sucesso!', 'success');
                 carregarHistoricoChamado(id);
                 if (lat && lon) {
@@ -866,7 +905,10 @@ async function carregarDadosChamadoUnico(id) {
     if (document.getElementById('detalhe_titulo')) document.getElementById('detalhe_titulo').value = data.titulo || '';
     if (document.getElementById('detalhe_status')) document.getElementById('detalhe_status').value = data.status || 'Criado';
     if (document.getElementById('detalhe_busca_endereco')) {
-        document.getElementById('detalhe_busca_endereco').value = [data.rua, data.bairro, data.cidade].filter(Boolean).join(', ');
+        const enderecoCompleto = [data.rua, data.bairro, data.cidade].filter(Boolean).join(', ');
+        document.getElementById('detalhe_busca_endereco').value = enderecoCompleto;
+        const formulario = document.getElementById('formEditarChamadoUnico');
+        if (formulario) formulario.dataset.enderecoAnterior = enderecoCompleto;
     }
     if (document.getElementById('detalhe_rua')) document.getElementById('detalhe_rua').value = data.rua || '';
     if (document.getElementById('detalhe_bairro')) document.getElementById('detalhe_bairro').value = data.bairro || '';
