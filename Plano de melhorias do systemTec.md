@@ -29,9 +29,7 @@
 - Dashboard com filtros combinados no mapa por status, período, técnico, cidade e prioridade.
 
 - Marcadores do mapa com cores diferentes por status.
-
-## Próximos ajustes que podem ser implementados no código
-
+- 
 - Histórico completo antes/depois para todos os campos alterados.
 
 - Pesquisa por ID, cliente, filial, título e endereço.
@@ -43,6 +41,8 @@
 - Cores e filtros adicionais no mapa.
 
 - Indicadores de tempo médio de atendimento e resolução.
+
+## Próximos ajustes que podem ser implementados no código
 
 - Separação do script.js em módulos menores.
 
