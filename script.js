@@ -740,6 +740,20 @@ async function alterarStatusChamado(chamadoId, novoStatus, evento) {
 // -------------------------------------------------------------------------
 // DETALHES E HISTÓRICO DO CHAMADO (`detalhes-chamado.html`)
 // -------------------------------------------------------------------------
+function extrairNumeroEndereco(termo) {
+    const encontrados = [...String(termo || '').matchAll(/(?:\bn[ºo.]?\s*)?(\d+[A-Za-z]?)\b/gi)];
+    return encontrados.length ? encontrados[encontrados.length - 1][1] : '';
+}
+
+function formatarEnderecoSugestao(local, termo) {
+    const numeroDigitado = extrairNumeroEndereco(termo);
+    const endereco = local.display_name || '';
+    if (numeroDigitado && !new RegExp(`(?:^|\\D)${numeroDigitado}(?:\\D|$)`).test(endereco)) {
+        return `${endereco}, ${numeroDigitado}`;
+    }
+    return endereco;
+}
+
 let timerBuscaDetalhe = null;
 function sugerirEnderecosDetalhe(termo) {
     clearTimeout(timerBuscaDetalhe);
@@ -763,13 +777,19 @@ function sugerirEnderecosDetalhe(termo) {
                     const item = document.createElement('button');
                     item.type = 'button';
                     item.className = 'list-group-item list-group-item-action list-group-item-light small w-100 text-start border-0';
-                    item.textContent = local.display_name;
+                    item.textContent = formatarEnderecoSugestao(local, termo);
                     item.addEventListener('pointerdown', (e) => {
                         e.preventDefault();
+                        const numeroDigitado = extrairNumeroEndereco(termo);
+                        if (!local.address) local.address = {};
+                        if (!local.address.house_number && numeroDigitado) local.address.house_number = numeroDigitado;
                         selecionarSugestaoDetalhe(local);
                     });
                     item.addEventListener('click', (e) => {
                         e.preventDefault();
+                        const numeroDigitado = extrairNumeroEndereco(termo);
+                        if (!local.address) local.address = {};
+                        if (!local.address.house_number && numeroDigitado) local.address.house_number = numeroDigitado;
                         selecionarSugestaoDetalhe(local);
                     });
                     container.appendChild(item);
