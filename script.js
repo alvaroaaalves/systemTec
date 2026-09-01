@@ -790,9 +790,10 @@ function selecionarSugestaoDetalhe(local) {
     const bairro = address.suburb || address.neighbourhood || address.city_district || 'Centro';
     const cidade = address.city || address.town || address.municipality || 'Cidade não informada';
     let estado = address.state || '';
+    const enderecoCompleto = [rua, bairro, cidade, estado].filter(Boolean).join(', ');
 
-    // O campo visível mostra o endereço completo; a rua fica separada para gravação.
-    document.getElementById('detalhe_busca_endereco').value = local.display_name || rua;
+    // O campo visível mostra a rua com número e os demais componentes do endereço.
+    document.getElementById('detalhe_busca_endereco').value = enderecoCompleto || local.display_name || rua;
     document.getElementById('detalhe_rua').value = rua;
     document.getElementById('detalhe_bairro').value = bairro;
     document.getElementById('detalhe_cidade').value = cidade;
