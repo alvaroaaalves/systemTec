@@ -30,9 +30,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (paginaAtual === "clientes.html") {
         carregarListaClientes();
     } else if (paginaAtual === "chamados.html") {
+        carregarClientesSelect('chamado_cliente');
         carregarTecnicosSelect();
         carregarChamadosRecentes();
     } else if (paginaAtual === "detalhes-chamado.html") {
+        await carregarClientesSelect('detalhe_cliente');
         inicializarDetalhesChamado();
     } else if (paginaAtual === "relatorios.html") {
         carregarDadosRelatorios();
@@ -592,6 +594,35 @@ if (formChamado) {
     });
 }
 
+async function carregarClientesSelect(selectId) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    const valorAtual = select.value;
+    select.innerHTML = '<option value="">Carregando clientes...</option>';
+    select.disabled = true;
+
+    const { data, error } = await db.from('clientes').select('id, nome').order('nome', { ascending: true });
+
+    if (error) {
+        console.error('Erro ao carregar clientes:', error);
+        select.innerHTML = '<option value="">Erro ao carregar clientes</option>';
+        select.disabled = false;
+        return;
+    }
+
+    select.innerHTML = '<option value="">Selecione o cliente...</option>';
+    (data || []).forEach(cliente => {
+        const option = document.createElement('option');
+        option.value = cliente.nome;
+        option.textContent = cliente.nome;
+        select.appendChild(option);
+    });
+
+    if (valorAtual) select.value = valorAtual;
+    select.disabled = false;
+}
+
 async function carregarTecnicosSelect() {
     const select = document.getElementById('chamado_tecnico');
     if (!select) return;
@@ -628,7 +659,7 @@ async function carregarChamadosRecentes() {
                     <small class="text-muted">${escapeHTML(c.filial || '')} | ${escapeHTML(c.titulo)}</small>
                 </td>
                 <td>
-                    <select class="form-select form-select-sm" onchange="alterarStatusChamado(${c.id}, this.value, event)">
+                    <select class="form-select form-select-sm" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onchange="alterarStatusChamado(${c.id}, this.value, event)">
                         ${STATUS_OPCOES.map(status => `<option value="${status}" ${status === c.status ? 'selected' : ''}>${status}</option>`).join('')}
                     </select>
                 </td>
