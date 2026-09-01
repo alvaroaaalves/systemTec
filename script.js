@@ -818,6 +818,8 @@ async function inicializarDetalhesChamado() {
                 carregarHistoricoChamado(id);
                 if (lat && lon) {
                     atualizarMapaDetalhe(parseFloat(lat), parseFloat(lon));
+                    // Recalcula as distâncias usando a nova localização salva.
+                    await carregarTecnicosProximos(id);
                 }
             }
         });
