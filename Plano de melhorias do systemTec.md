@@ -16,7 +16,6 @@
 
 ## Próximos ajustes que podem ser implementados no código
 
-- Histórico completo antes/depois para todos os campos alterados.
 - Pesquisa por ID, cliente, filial, título e endereço.
 - Paginação da lista de chamados.
 - Prioridade e prazo de atendimento.
