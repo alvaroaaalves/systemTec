@@ -51,6 +51,21 @@
                                 <textarea class="form-control" id="chamado_problema" rows="2" placeholder="Detalhes do que está ocorrendo..." required></textarea>
                             </div>
 
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-muted">Prioridade</label>
+                                    <select class="form-select" id="chamado_prioridade" required>
+                                        <option value="Baixa">Baixa</option>
+                                        <option value="Média" selected>Média</option>
+                                        <option value="Alta">Alta</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-bold text-muted">Prazo</label>
+                                    <input type="datetime-local" class="form-control" id="chamado_prazo">
+                                </div>
+                            </div>
+
                             <div class="mb-3 position-relative">
                                 <label class="form-label small fw-bold text-muted">Buscar Endereço (CEP ou Rua)</label>
                                 <input type="text" class="form-control" id="chamado_busca_endereco" placeholder="Digite para buscar..." oninput="sugerirEnderecosChamado(this.value)">
@@ -82,7 +97,8 @@
                 <div class="card shadow-sm">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
                         <h5 class="mb-0 fw-bold">Chamados Registrados</h5>
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <input type="search" id="buscaChamados" class="form-control form-control-sm" placeholder="Pesquisar ID, cliente, filial, título ou endereço" oninput="pesquisarChamados()" style="min-width: 240px;">
                             <select id="filtroStatus" class="form-select form-select-sm" onchange="carregarChamadosRecentes()">
                                 <option value="">Todos os Status</option>
                                 <option value="Criado">Criado</option>
@@ -100,13 +116,22 @@
                                     <tr>
                                         <th>ID / Cliente & Filial</th>
                                         <th>Status</th>
+                                        <th>Prioridade / Prazo</th>
                                         <th>Cidade</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tabelaChamadosBody">
-                                    <tr><td colspan="3" class="text-muted text-center">Carregando...</td></tr>
+                                    <tr><td colspan="4" class="text-muted text-center">Carregando...</td></tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small id="paginacaoInfo" class="text-muted"></small>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" id="paginaAnterior" class="btn btn-outline-secondary" onclick="mudarPaginaChamados(-1)">Anterior</button>
+                                <button type="button" id="paginaProxima" class="btn btn-outline-secondary" onclick="mudarPaginaChamados(1)">Próxima</button>
+                            </div>
+
                         </div>
                     </div>
                 </div>
