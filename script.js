@@ -1141,27 +1141,109 @@ async function carregarDadosRelatorios() {
     }
 }
 
-async function exportarCSV() {
+function valorCSV(valor) {
+    return String(valor ?? '').replace(/"/g, '""');
+}
+
+function formatarDataCSV(valor) {
+    if (!valor) return '';
+    const data = new Date(valor);
+    return Number.isNaN(data.getTime()) ? String(valor) : data.toLocaleString('pt-BR');
+}
+
+async function exportarChamadosPorPeriodo() {
+    const dataInicial = document.getElementById('relatorioDataInicial')?.value;
+    const dataFinal = document.getElementById('relatorioDataFinal')?.value;
+
+    if (!dataInicial || !dataFinal) {
+        Swal.fire('Atenção', 'Informe a data inicial e a data final.', 'warning');
+        return;
+    }
+    if (dataInicial > dataFinal) {
+        Swal.fire('Atenção', 'A data inicial não pode ser posterior à data final.', 'warning');
+        return;
+    }
+
     try {
-        const { data, error } = await db.from('chamados').select('id, cliente, filial, titulo, status, cidade, criado_em');
-        if (error || !data || data.length === 0) {
-            Swal.fire('Aviso', 'Não há dados para exportar.', 'info');
+        const inicio = `${dataInicial}T00:00:00.000Z`;
+        const fim = `${dataFinal}T23:59:59.999Z`;
+        const { data: chamados, error: erroChamados } = await db.from('chamados')
+            .select('*')
+            .gte('criado_em', inicio)
+            .lte('criado_em', fim)
+            .order('criado_em', { ascending: true });
+
+        if (erroChamados) throw erroChamados;
+        if (!chamados || chamados.length === 0) {
+            Swal.fire('Aviso', 'Não há chamados criados no período informado.', 'info');
             return;
         }
 
-        let csvContent = "data:text/csv;charset=utf-8,ID;Cliente;Filial;Titulo;Status;Cidade;Criado Em\n";
-        data.forEach(row => {
-            csvContent += `${row.id};"${row.cliente || ''}";"${row.filial || ''}";"${row.titulo || ''}";${row.status};"${row.cidade || ''}";${row.criado_em}\n`;
+        const idsTecnicos = [...new Set(chamados.map(c => c.tecnico_id).filter(Boolean))];
+        const idsChamados = chamados.map(c => c.id);
+        const [resTecnicos, resHistorico] = await Promise.all([
+            idsTecnicos.length ? db.from('tecnicos').select('id, nome').in('id', idsTecnicos) : Promise.resolve({ data: [], error: null }),
+            db.from('historico_chamados').select('*').in('chamado_id', idsChamados).order('criado_em', { ascending: false })
+        ]);
+
+        if (resTecnicos.error) throw resTecnicos.error;
+        if (resHistorico.error) throw resHistorico.error;
+
+        const nomesTecnicos = Object.fromEntries((resTecnicos.data || []).map(t => [String(t.id), t.nome]));
+        const historicoPorChamado = {};
+        (resHistorico.data || []).forEach(item => {
+            if (!historicoPorChamado[item.chamado_id]) historicoPorChamado[item.chamado_id] = [];
+            historicoPorChamado[item.chamado_id].push(item);
         });
 
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "relatorio_chamados.csv");
+        const cabecalho = ['ID', 'Cliente', 'Filial', 'Endereço', 'Título', 'Técnico', 'Criado em', 'Resolvido em', 'Última informação do histórico', 'Status atual'];
+        const linhas = [cabecalho];
+
+        chamados.forEach(c => {
+            const historico = historicoPorChamado[c.id] || [];
+            const ultimo = historico[0];
+            const eventosResolucao = historico.filter(h => /resolvido|validado/i.test(h.observacao || ''));
+            const chamadoFoiResolvido = ['Resolvido', 'Validado'].includes(c.status);
+            const dataResolvido = chamadoFoiResolvido
+                ? (c.resolvido_em || c.data_resolucao || c.fechado_em || (eventosResolucao[0]?.criado_em || ''))
+                : '';
+            const endereco = [c.rua, c.bairro, c.cidade, c.estado].filter(Boolean).join(', ');
+            linhas.push([
+                c.id,
+                c.cliente,
+                c.filial,
+                endereco,
+                c.titulo,
+                nomesTecnicos[String(c.tecnico_id)] || '',
+                formatarDataCSV(c.criado_em),
+                formatarDataCSV(dataResolvido),
+                ultimo?.observacao || '',
+                c.status
+            ]);
+        });
+
+        const csv = '\ufeff' + linhas.map(linha => linha.map(valor => `"${valorCSV(valor)}"`).join(';')).join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `relatorio_chamados_${dataInicial}_${dataFinal}.csv`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     } catch (err) {
-        Swal.fire('Erro', 'Erro ao gerar arquivo CSV.', 'error');
+        console.error('Erro ao gerar relatório de chamados:', err);
+        Swal.fire('Erro', err.message || 'Erro ao gerar arquivo CSV.', 'error');
     }
+}
+
+// Compatibilidade com o botão antigo, caso ainda exista em alguma página.
+async function exportarCSV() {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const inicial = document.getElementById('relatorioDataInicial');
+    const final = document.getElementById('relatorioDataFinal');
+    if (inicial && !inicial.value) inicial.value = hoje;
+    if (final && !final.value) final.value = hoje;
+    return exportarChamadosPorPeriodo();
 }
