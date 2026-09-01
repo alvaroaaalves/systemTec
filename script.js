@@ -795,7 +795,8 @@ async function inicializarDetalhesChamado() {
                 rua: document.getElementById('detalhe_rua').value,
                 bairro: document.getElementById('detalhe_bairro').value,
                 cidade: document.getElementById('detalhe_cidade').value,
-                estado: document.getElementById('detalhe_estado').value
+                estado: document.getElementById('detalhe_estado').value,
+                tecnico_id: document.getElementById('detalhe_tecnico')?.value || null
             };
 
             if (lat && lon) {
@@ -845,13 +846,7 @@ async function inicializarDetalhesChamado() {
 async function carregarTecnicosSelectDetalhe() {
     const select = document.getElementById('detalhe_tecnico');
     if (!select) return;
-    const { data } = await db.from('tecnicos').select('id, nome, bairro');
-    if (data) {
-        select.innerHTML = '<option value="">Atribuir técnico manualmente</option>';
-        data.forEach(t => {
-            select.innerHTML += `<option value="${t.id}">${escapeHTML(t.nome)} (${escapeHTML(t.bairro)})</option>`;
-        });
-    }
+    select.innerHTML = '<option value="">Calculando técnicos e distâncias...</option>';
 }
 
 async function carregarDadosChamadoUnico(id) {
@@ -881,8 +876,9 @@ async function carregarDadosChamadoUnico(id) {
         document.getElementById('detalhe_rua').value = data.rua || '';
     }
 
-    if (document.getElementById('detalhe_tecnico') && data.tecnico_id) {
-        document.getElementById('detalhe_tecnico').value = data.tecnico_id;
+    if (document.getElementById('detalhe_tecnico')) {
+        document.getElementById('detalhe_tecnico').dataset.tecnicoAtual = data.tecnico_id || '';
+        if (data.tecnico_id) document.getElementById('detalhe_tecnico').value = data.tecnico_id;
     }
 
     if (data.localizacao) {
@@ -967,7 +963,7 @@ async function carregarHistoricoChamado(chamadoId) {
 }
 
 async function carregarTecnicosProximos(chamadoId) {
-    const select = document.getElementById('selectTecnicoProximo');
+    const select = document.getElementById('detalhe_tecnico');
     if (!select) return;
 
     try {
@@ -981,7 +977,8 @@ async function carregarTecnicosProximos(chamadoId) {
         tecnicos.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.id;
-            opt.textContent = `${t.nome} — ${t.distancia_km} km (${t.bairro})`;
+            opt.textContent = `${t.nome} — ${Number(t.distancia_km).toFixed(2)} km (${t.bairro || 'Bairro não informado'})`;
+            if (String(t.id) === String(select.dataset.tecnicoAtual || '')) opt.selected = true;
             select.appendChild(opt);
         });
     } catch (err) {
@@ -990,7 +987,7 @@ async function carregarTecnicosProximos(chamadoId) {
 }
 
 async function atribuirTecnicoProximo() {
-    const select = document.getElementById('selectTecnicoProximo');
+    const select = document.getElementById('detalhe_tecnico');
     if (!select || !select.value) {
         Swal.fire('Aviso', 'Selecione um técnico da lista de proximidade.', 'warning');
         return;
