@@ -7,6 +7,7 @@ const STATUS_OPCOES = ['Criado', 'Em Atendimento', 'Resolvido', 'Cancelado', 'Va
 let listaTecnicosCache = [];
 let listaClientesCache = [];
 let mapaDashboard = null;
+let marcadoresDashboard = null;
 let mapaDetalhe = null; // Mapa da tela de detalhes do chamado
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -172,30 +173,43 @@ function extrairCoordenadasLocalizacao(valor) {
 // Mapa Leaflet no Dashboard
 async function inicializarMapaDashboard() {
     const elementoMapa = document.getElementById('mapaChamados');
-    if (!elementoMapa) return;
+    if (!elementoMapa || typeof L === 'undefined') return;
 
-    mapaDashboard = L.map('mapaChamados').setView([-15.7801, -47.9292], 4);
+    if (!mapaDashboard) {
+        mapaDashboard = L.map('mapaChamados').setView([-15.7801, -47.9292], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(mapaDashboard);
+        marcadoresDashboard = L.layerGroup().addTo(mapaDashboard);
+    }
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap'
-    }).addTo(mapaDashboard);
+    const status = document.getElementById('filtroMapaStatus')?.value || '';
+    let consulta = db.from('chamados').select('*').not('localizacao', 'is', null);
+    if (status) consulta = consulta.eq('status', status);
 
-    const { data: chamados, error } = await db.from('chamados').select('*').not('localizacao', 'is', null);
-    if (error || !chamados) return;
+    const { data: chamados, error } = await consulta;
+    if (error) {
+        console.error('Erro ao carregar chamados do mapa:', error);
+        return;
+    }
 
-    let bounds = [];
-    chamados.forEach(c => {
+    marcadoresDashboard.clearLayers();
+    const bounds = [];
+    (chamados || []).forEach(c => {
         const coordenadas = extrairCoordenadasLocalizacao(c.localizacao);
         if (coordenadas && Number.isFinite(coordenadas.lat) && Number.isFinite(coordenadas.lon)) {
-            const marker = L.marker([coordenadas.lat, coordenadas.lon]).addTo(mapaDashboard);
+            const marker = L.marker([coordenadas.lat, coordenadas.lon]);
             marker.bindPopup(`<b>Chamado #${c.id}</b><br>Cliente: ${escapeHTML(c.cliente || 'N/A')}<br>Status: ${escapeHTML(c.status || '')}`);
+            marcadoresDashboard.addLayer(marker);
             bounds.push([coordenadas.lat, coordenadas.lon]);
         }
     });
 
     if (bounds.length > 0) {
         mapaDashboard.fitBounds(bounds, { padding: [50, 50] });
+    } else {
+        mapaDashboard.setView([-15.7801, -47.9292], 4);
     }
 }
 
