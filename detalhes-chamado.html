@@ -50,8 +50,9 @@
                             <!-- Campo Único de Endereço (Busca + Salva Rua, Coordenadas e Mapa) -->
                             <div class="mb-3 position-relative">
                                 <label class="form-label fw-bold">Endereço / Localização</label>
-                                <input type="text" id="detalhe_rua" class="form-control" placeholder="Digite a rua, número ou bairro..." onkeyup="sugerirEnderecosDetalhe(this.value)">
+                                <input type="text" id="detalhe_busca_endereco" class="form-control" placeholder="Digite a rua, número ou bairro..." autocomplete="off" oninput="sugerirEnderecosDetalhe(this.value)">
                                 <div id="sugestoesDetalhe" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1000;"></div>
+                                <input type="hidden" id="detalhe_rua">
                                 <input type="hidden" id="detalhe_lat">
                                 <input type="hidden" id="detalhe_lon">
                                 <input type="hidden" id="detalhe_estado">
