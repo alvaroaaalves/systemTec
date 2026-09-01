@@ -118,19 +118,54 @@ async function fazerLogout() {
 // Dashboard
 async function carregarDadosDashboard() {
     try {
-        const [totalChamados, criados, emAtendimento, totalTecnicos] = await Promise.all([
-            db.from('chamados').select('*', { count: 'exact', head: true }),
-            db.from('chamados').select('*', { count: 'exact', head: true }).eq('status', 'Criado'),
-            db.from('chamados').select('*', { count: 'exact', head: true }).eq('status', 'Em Atendimento'),
+        const [{ data: chamados, error: erroChamados }, { count: totalTecnicos, error: erroTecnicos }] = await Promise.all([
+            db.from('chamados').select('*').order('criado_em', { ascending: false }),
             db.from('tecnicos').select('*', { count: 'exact', head: true })
         ]);
+        if (erroChamados) throw erroChamados;
+        if (erroTecnicos) throw erroTecnicos;
 
-        if (document.getElementById('dash_total_chamados')) document.getElementById('dash_total_chamados').textContent = totalChamados.count ?? 0;
-        if (document.getElementById('dash_abertos')) document.getElementById('dash_abertos').textContent = criados.count ?? 0;
-        if (document.getElementById('dash_atendimento')) document.getElementById('dash_atendimento').textContent = emAtendimento.count ?? 0;
-        if (document.getElementById('dash_total_tecnicos')) document.getElementById('dash_total_tecnicos').textContent = totalTecnicos.count ?? 0;
+        const lista = chamados || [];
+        const agora = new Date();
+        const inicioMes = new Date(agora.getFullYear(), agora.getMonth(), 1);
+        const atrasados = lista.filter(c => c.status === 'Criado' && c.criado_em && (agora - new Date(c.criado_em)) >= 48 * 60 * 60 * 1000).length;
+        const resolvidos = lista.filter(c => ['Resolvido', 'Validado'].includes(c.status));
+        const resolvidosPeriodo = resolvidos.filter(c => new Date(c.resolvido_em || c.fechado_em || c.atualizado_em || c.criado_em) >= inicioMes).length;
+        const clientes = new Set(lista.map(c => String(c.cliente || '').trim()).filter(Boolean)).size;
+        const tempos = resolvidos.map(c => {
+            const fim = c.resolvido_em || c.fechado_em || c.atualizado_em;
+            return fim && c.criado_em ? new Date(fim) - new Date(c.criado_em) : 0;
+        }).filter(t => t > 0);
+        const mediaHoras = tempos.length ? (tempos.reduce((a, b) => a + b, 0) / tempos.length / 3600000) : 0;
+        const indicadores = {
+            dash_total_chamados: lista.length,
+            dash_abertos: lista.filter(c => c.status === 'Criado').length,
+            dash_atendimento: lista.filter(c => c.status === 'Em Atendimento').length,
+            dash_atrasados: atrasados,
+            dash_resolvidos_periodo: resolvidosPeriodo,
+            dash_tempo_medio: mediaHoras ? `${mediaHoras.toFixed(1)} h` : '-',
+            dash_total_clientes: clientes,
+            dash_total_tecnicos: totalTecnicos ?? 0
+        };
+        Object.entries(indicadores).forEach(([id, valor]) => {
+            const elemento = document.getElementById(id);
+            if (elemento) elemento.textContent = valor;
+        });
+
+        const contagemClientes = {};
+        lista.forEach(c => {
+            const cliente = String(c.cliente || 'Não informado').trim() || 'Não informado';
+            contagemClientes[cliente] = (contagemClientes[cliente] || 0) + 1;
+        });
+        const tabelaClientes = document.getElementById('dash_chamados_por_cliente');
+        if (tabelaClientes) {
+            const linhasClientes = Object.entries(contagemClientes).sort((a, b) => b[1] - a[1]);
+            tabelaClientes.innerHTML = linhasClientes.length
+                ? linhasClientes.map(([cliente, quantidade]) => `<tr><td>${escapeHTML(cliente)}</td><td class="text-end fw-bold">${quantidade}</td></tr>`).join('')
+                : '<tr><td colspan="2" class="text-muted">Nenhum chamado encontrado.</td></tr>';
+        }
     } catch (err) {
-        console.error('Erro ao carregar dashboard', err);
+        console.error('Erro ao carregar dashboard:', err);
     }
 }
 
@@ -170,6 +205,27 @@ function extrairCoordenadasLocalizacao(valor) {
     return null;
 }
 
+function corMarcadorStatus(status) {
+    return {
+        'Criado': '#6c757d',
+        'Em Atendimento': '#ffc107',
+        'Resolvido': '#0dcaf0',
+        'Validado': '#198754',
+        'Cancelado': '#dc3545'
+    }[status] || '#212529';
+}
+
+function iconeMarcadorStatus(status) {
+    const cor = corMarcadorStatus(status);
+    return L.divIcon({
+        className: 'marcador-status',
+        html: `<span style="display:block;width:22px;height:22px;border-radius:50%;background:${cor};border:3px solid #fff;box-shadow:0 1px 5px #555;"></span>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+        popupAnchor: [0, -10]
+    });
+}
+
 // Mapa Leaflet no Dashboard
 async function inicializarMapaDashboard() {
     const elementoMapa = document.getElementById('mapaChamados');
@@ -185,22 +241,53 @@ async function inicializarMapaDashboard() {
     }
 
     const status = document.getElementById('filtroMapaStatus')?.value || '';
-    let consulta = db.from('chamados').select('*').not('localizacao', 'is', null);
-    if (status) consulta = consulta.eq('status', status);
+    const dataInicial = document.getElementById('filtroMapaDataInicial')?.value || '';
+    const dataFinal = document.getElementById('filtroMapaDataFinal')?.value || '';
+    const tecnicoId = document.getElementById('filtroMapaTecnico')?.value || '';
+    const cidade = (document.getElementById('filtroMapaCidade')?.value || '').trim().toLowerCase();
+    const prioridade = document.getElementById('filtroMapaPrioridade')?.value || '';
 
-    const { data: chamados, error } = await consulta;
+    const [{ data: chamados, error }, { data: tecnicos }] = await Promise.all([
+        db.from('chamados').select('*').not('localizacao', 'is', null),
+        db.from('tecnicos').select('id, nome').order('nome', { ascending: true })
+    ]);
     if (error) {
         console.error('Erro ao carregar chamados do mapa:', error);
         return;
     }
 
+    const tecnicoSelect = document.getElementById('filtroMapaTecnico');
+    if (tecnicoSelect) {
+        const valorAtual = tecnicoSelect.value;
+        tecnicoSelect.innerHTML = '<option value="">Todos os técnicos</option>';
+        (tecnicos || []).forEach(t => {
+            const option = document.createElement('option');
+            option.value = t.id;
+            option.textContent = t.nome;
+            tecnicoSelect.appendChild(option);
+        });
+        tecnicoSelect.value = valorAtual;
+    }
+
+    const inicio = dataInicial ? new Date(`${dataInicial}T00:00:00`) : null;
+    const fim = dataFinal ? new Date(`${dataFinal}T23:59:59.999`) : null;
+    const filtrados = (chamados || []).filter(c => {
+        const criado = c.criado_em ? new Date(c.criado_em) : null;
+        return (!status || c.status === status)
+            && (!inicio || (criado && criado >= inicio))
+            && (!fim || (criado && criado <= fim))
+            && (!tecnicoId || String(c.tecnico_id || '') === String(tecnicoId))
+            && (!cidade || String(c.cidade || '').toLowerCase().includes(cidade))
+            && (!prioridade || c.prioridade === prioridade);
+    });
+
     marcadoresDashboard.clearLayers();
     const bounds = [];
-    (chamados || []).forEach(c => {
+    filtrados.forEach(c => {
         const coordenadas = extrairCoordenadasLocalizacao(c.localizacao);
         if (coordenadas && Number.isFinite(coordenadas.lat) && Number.isFinite(coordenadas.lon)) {
-            const marker = L.marker([coordenadas.lat, coordenadas.lon]);
-            marker.bindPopup(`<b>Chamado #${c.id}</b><br>Cliente: ${escapeHTML(c.cliente || 'N/A')}<br>Status: ${escapeHTML(c.status || '')}`);
+            const marker = L.marker([coordenadas.lat, coordenadas.lon], { icon: iconeMarcadorStatus(c.status) });
+            marker.bindPopup(`<b>Chamado #${c.id}</b><br>Cliente: ${escapeHTML(c.cliente || 'N/A')}<br>Status: ${escapeHTML(c.status || '')}<br>Cidade: ${escapeHTML(c.cidade || '')}`);
             marcadoresDashboard.addLayer(marker);
             bounds.push([coordenadas.lat, coordenadas.lon]);
         }
