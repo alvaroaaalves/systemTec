@@ -29,7 +29,8 @@
             <div class="col-md-5 mb-4">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3">
-                        <h5 class="card-title mb-0 fw-bold" id="tituloCardChamado">Editar Chamado</h5>
+                        <h5 class="card-title mb-1 fw-bold" id="tituloCardChamado">Chamado</h5>
+                        <small class="text-muted" id="subtituloIdChamado">ID: --</small>
                     </div>
                     <div class="card-body">
                         <form id="formEditarChamadoUnico">
@@ -116,6 +117,17 @@
 
             <!-- Coluna Direita: Histórico e Adição de Observações -->
             <div class="col-md-7">
+                <!-- Descrição inicial do chamado -->
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="card-title mb-0 fw-bold">Descrição inicial</h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="detalhe_descricao_inicial" class="form-control bg-light" rows="3" readonly placeholder="Descrição inicial não registrada."></textarea>
+                        <small class="text-muted d-block mt-2">Este campo não pode ser alterado. Novas informações devem ser adicionadas no histórico.</small>
+                    </div>
+                </div>
+
                 <!-- Adicionar Nova Observação -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3">
