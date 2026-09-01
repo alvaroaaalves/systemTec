@@ -42,62 +42,48 @@
             </div>
         </div>
 
-        <!-- Indicadores operacionais -->
-        <div class="row mb-4">
-            <div class="col-md-3 mb-3"><div class="card shadow-sm border-0 text-center py-3 bg-white h-100"><h6 class="text-muted">Total de Chamados</h6><h2 class="fw-bold text-dark mb-0" id="dash_total_chamados">0</h2></div></div>
-            <div class="col-md-3 mb-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-primary border-4 h-100"><h6 class="text-muted">Abertos</h6><h2 class="fw-bold text-primary mb-0" id="dash_abertos">0</h2></div></div>
-            <div class="col-md-3 mb-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-warning border-4 h-100"><h6 class="text-muted">Em Atendimento</h6><h2 class="fw-bold text-warning mb-0" id="dash_atendimento">0</h2></div></div>
-            <div class="col-md-3 mb-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-danger border-4 h-100"><h6 class="text-muted">Atrasados (&gt; 48h)</h6><h2 class="fw-bold text-danger mb-0" id="dash_atrasados">0</h2></div></div>
-            <div class="col-md-3 mb-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-info border-4 h-100"><h6 class="text-muted">Resolvidos no período</h6><h2 class="fw-bold text-info mb-0" id="dash_resolvidos_periodo">0</h2></div></div>
-            <div class="col-md-3 mb-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-success border-4 h-100"><h6 class="text-muted">Tempo médio de resolução</h6><h2 class="fw-bold text-success mb-0" id="dash_tempo_medio">-</h2></div></div>
-            <div class="col-md-3 mb-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-secondary border-4 h-100"><h6 class="text-muted">Clientes atendidos</h6><h2 class="fw-bold text-secondary mb-0" id="dash_total_clientes">0</h2></div></div>
-            <div class="col-md-3 mb-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-success border-4 h-100"><h6 class="text-muted">Técnicos ativos</h6><h2 class="fw-bold text-success mb-0" id="dash_total_tecnicos">0</h2></div></div>
-        </div>
-
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-header bg-white fw-bold">Chamados por cliente</div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Cliente</th><th class="text-end">Quantidade</th></tr></thead>
-                        <tbody id="dash_chamados_por_cliente"><tr><td colspan="2" class="text-muted">Carregando...</td></tr></tbody>
-                    </table>
+        <div class="row g-4 align-items-start">
+            <div class="col-lg-8">
+                <!-- Indicadores operacionais -->
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm border-0 text-center py-3 bg-white h-100"><h6 class="text-muted small">Total</h6><h2 class="fw-bold text-dark mb-0" id="dash_total_chamados">0</h2></div></div>
+                    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-primary border-4 h-100"><h6 class="text-muted small">Abertos</h6><h2 class="fw-bold text-primary mb-0" id="dash_abertos">0</h2></div></div>
+                    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-warning border-4 h-100"><h6 class="text-muted small">Em atendimento</h6><h2 class="fw-bold text-warning mb-0" id="dash_atendimento">0</h2></div></div>
+                    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-danger border-4 h-100"><h6 class="text-muted small">Atrasados</h6><h2 class="fw-bold text-danger mb-0" id="dash_atrasados">0</h2></div></div>
+                    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-info border-4 h-100"><h6 class="text-muted small">Resolvidos no mês</h6><h2 class="fw-bold text-info mb-0" id="dash_resolvidos_periodo">0</h2></div></div>
+                    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-success border-4 h-100"><h6 class="text-muted small">Média de resolução</h6><h2 class="fw-bold text-success mb-0" id="dash_tempo_medio">-</h2></div></div>
+                    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-secondary border-4 h-100"><h6 class="text-muted small">Clientes</h6><h2 class="fw-bold text-secondary mb-0" id="dash_total_clientes">0</h2></div></div>
+                    <div class="col-sm-6 col-xl-3"><div class="card shadow-sm border-0 text-center py-3 bg-white border-start border-success border-4 h-100"><h6 class="text-muted small">Técnicos</h6><h2 class="fw-bold text-success mb-0" id="dash_total_tecnicos">0</h2></div></div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Seção do Mapa -->
-        <div class="row">
-            <div class="col-12">
                 <div class="card shadow-sm border-0">
-                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center gap-2 flex-wrap">
-                        <h5 class="card-title mb-0 fw-bold">Mapa de Chamados Georreferenciados</h5>
-                        <div class="d-flex flex-wrap gap-2 justify-content-end">
-                            <select id="filtroMapaStatus" class="form-select form-select-sm" style="width: 170px;" onchange="inicializarMapaDashboard()">
-                                <option value="" selected>Todos os status</option>
-                                <option value="Criado">Abertos</option>
-                                <option value="Em Atendimento">Em atendimento</option>
-                                <option value="Resolvido">Resolvidos</option>
-                                <option value="Validado">Validados</option>
-                                <option value="Cancelado">Cancelados</option>
-                            </select>
-                            <input type="date" id="filtroMapaDataInicial" class="form-control form-control-sm" title="Data inicial" onchange="inicializarMapaDashboard()">
-                            <input type="date" id="filtroMapaDataFinal" class="form-control form-control-sm" title="Data final" onchange="inicializarMapaDashboard()">
-                            <select id="filtroMapaTecnico" class="form-select form-select-sm" style="width: 170px;" onchange="inicializarMapaDashboard()">
-                                <option value="">Todos os técnicos</option>
-                            </select>
-                            <input type="text" id="filtroMapaCidade" class="form-control form-control-sm" style="width: 150px;" placeholder="Cidade" oninput="inicializarMapaDashboard()">
-                            <select id="filtroMapaPrioridade" class="form-select form-select-sm" style="width: 140px;" onchange="inicializarMapaDashboard()">
-                                <option value="">Prioridade</option>
-                                <option value="Alta">Alta</option>
-                                <option value="Média">Média</option>
-                                <option value="Baixa">Baixa</option>
-                            </select>
+                    <div class="card-header bg-white fw-bold">Chamados por cliente</div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead><tr><th>Cliente</th><th class="text-end">Quantidade</th></tr></thead>
+                                <tbody id="dash_chamados_por_cliente"><tr><td colspan="2" class="text-muted">Carregando...</td></tr></tbody>
+                            </table>
                         </div>
                     </div>
-                    <div class="card-body p-0">
-                        <div id="mapaChamados" style="height: 500px; width: 100%; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;"></div>
+                </div>
+            </div>
+
+            <!-- Mapa compacto na lateral direita -->
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 sticky-lg-top" style="top: 1rem;">
+                    <div class="card-header bg-white py-2">
+                        <h6 class="mb-2 fw-bold">Mapa de chamados</h6>
+                        <div class="row g-1">
+                            <div class="col-6"><select id="filtroMapaStatus" class="form-select form-select-sm" onchange="inicializarMapaDashboard()"><option value="" selected>Todos os status</option><option value="Criado">Abertos</option><option value="Em Atendimento">Em atendimento</option><option value="Resolvido">Resolvidos</option><option value="Validado">Validados</option><option value="Cancelado">Cancelados</option></select></div>
+                            <div class="col-6"><select id="filtroMapaTecnico" class="form-select form-select-sm" onchange="inicializarMapaDashboard()"><option value="">Todos os técnicos</option></select></div>
+                            <div class="col-6"><input type="date" id="filtroMapaDataInicial" class="form-control form-control-sm" title="Data inicial" onchange="inicializarMapaDashboard()"></div>
+                            <div class="col-6"><input type="date" id="filtroMapaDataFinal" class="form-control form-control-sm" title="Data final" onchange="inicializarMapaDashboard()"></div>
+                            <div class="col-6"><input type="text" id="filtroMapaCidade" class="form-control form-control-sm" placeholder="Cidade" oninput="inicializarMapaDashboard()"></div>
+                            <div class="col-6"><select id="filtroMapaPrioridade" class="form-select form-select-sm" onchange="inicializarMapaDashboard()"><option value="">Prioridade</option><option value="Alta">Alta</option><option value="Média">Média</option><option value="Baixa">Baixa</option></select></div>
+                        </div>
                     </div>
+                    <div class="card-body p-0"><div id="mapaChamados" style="height: 360px; width: 100%; border-bottom-left-radius: 0.375rem; border-bottom-right-radius: 0.375rem;"></div></div>
                 </div>
             </div>
         </div>
