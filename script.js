@@ -99,7 +99,8 @@ if (formLogin) {
                 window.location.href = 'dashboard.html';
             }
         } catch (err) {
-            Swal.fire('Erro', 'Não foi possível conectar.', 'error');
+            console.error('Erro inesperado no login:', err);
+            Swal.fire('Erro', err?.message || 'Não foi possível conectar ao servidor.', 'error');
         } finally {
             definirCarregando(botao, false);
         }
@@ -1022,5 +1023,4 @@ async function exportarCSV() {
     } catch (err) {
         Swal.fire('Erro', 'Erro ao gerar arquivo CSV.', 'error');
     }
-}
 }
