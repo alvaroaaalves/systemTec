@@ -21,6 +21,28 @@
 
     <div class="container pb-5">
         <h2 class="mb-4 fw-bold">Painel de Relatórios e Gestão</h2>
+
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">Exportar chamados por período</h5>
+                <p class="text-muted small">O arquivo usará os dados atuais de cada chamado e deixará em branco as datas que ainda não existirem.</p>
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label for="relatorioDataInicial" class="form-label">Data inicial</label>
+                        <input type="date" id="relatorioDataInicial" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="relatorioDataFinal" class="form-label">Data final</label>
+                        <input type="date" id="relatorioDataFinal" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-primary w-100" onclick="exportarChamadosPorPeriodo()">
+                            Baixar relatório CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <div class="row g-4 text-white">
             <div class="col-md-4">
