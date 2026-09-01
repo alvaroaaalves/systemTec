@@ -827,6 +827,17 @@ function selecionarSugestaoDetalhe(local) {
     atualizarMapaDetalhe(parseFloat(local.lat), parseFloat(local.lon));
 }
 
+function valorHistorico(valor) {
+    if (valor === null || valor === undefined || valor === '') return '(vazio)';
+    return String(valor);
+}
+
+async function obterNomeTecnicoHistorico(id) {
+    if (!id) return '(não designado)';
+    const { data } = await db.from('tecnicos').select('nome').eq('id', id).maybeSingle();
+    return data?.nome || `ID ${id}`;
+}
+
 async function inicializarDetalhesChamado() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
@@ -855,6 +866,7 @@ async function inicializarDetalhesChamado() {
             const campoEndereco = document.getElementById('detalhe_busca_endereco');
             const enderecoAnterior = formEdit.dataset.enderecoAnterior || '';
             const enderecoNovo = campoEndereco?.value?.trim() || '';
+            const dadosAnteriores = JSON.parse(formEdit.dataset.dadosAnteriores || '{}');
             
             let dadosUpdate = {
                 cliente: document.getElementById('detalhe_cliente').value,
@@ -879,15 +891,44 @@ async function inicializarDetalhesChamado() {
             if (error) {
                 Swal.fire('Erro', error.message, 'error');
             } else {
-                const observacoes = [`[Sistema] Dados do chamado atualizados.`];
-                if (enderecoAnterior && enderecoNovo && enderecoAnterior !== enderecoNovo) {
-                    observacoes.push(`[Sistema] Endereço alterado de: "${enderecoAnterior}" para: "${enderecoNovo}".`);
+                const dadosAtuais = {
+                    cliente: document.getElementById('detalhe_cliente')?.value || '',
+                    filial: document.getElementById('detalhe_filial')?.value || '',
+                    titulo: document.getElementById('detalhe_titulo')?.value || '',
+                    status: document.getElementById('detalhe_status')?.value || '',
+                    tecnico_id: document.getElementById('detalhe_tecnico')?.value || '',
+                    endereco: enderecoNovo,
+                    bairro: document.getElementById('detalhe_bairro')?.value || '',
+                    cidade: document.getElementById('detalhe_cidade')?.value || '',
+                    estado: document.getElementById('detalhe_estado')?.value || ''
+                };
+                const nomesCampos = {
+                    cliente: 'Cliente', filial: 'Filial', titulo: 'Título / descrição',
+                    status: 'Status', tecnico_id: 'Técnico', endereco: 'Endereço', bairro: 'Bairro',
+                    cidade: 'Cidade', estado: 'Estado'
+                };
+                const alteracoes = [];
+                let nomeTecnicoAnterior = '';
+                let nomeTecnicoAtual = '';
+                if (String(dadosAnteriores.tecnico_id || '') !== String(dadosAtuais.tecnico_id || '')) {
+                    [nomeTecnicoAnterior, nomeTecnicoAtual] = await Promise.all([
+                        obterNomeTecnicoHistorico(dadosAnteriores.tecnico_id),
+                        obterNomeTecnicoHistorico(dadosAtuais.tecnico_id)
+                    ]);
                 }
-                await db.from('historico_chamados').insert([{
-                    chamado_id: id,
-                    observacao: observacoes.join(' ')
-                }]);
+                Object.keys(nomesCampos).forEach(campo => {
+                    if (String(dadosAnteriores[campo] || '') !== String(dadosAtuais[campo] || '')) {
+                        const anterior = campo === 'tecnico_id' ? nomeTecnicoAnterior : dadosAnteriores[campo];
+                        const atual = campo === 'tecnico_id' ? nomeTecnicoAtual : dadosAtuais[campo];
+                        alteracoes.push(`${nomesCampos[campo]}: de "${valorHistorico(anterior)}" para "${valorHistorico(atual)}"`);
+                    }
+                });
+                const observacao = alteracoes.length
+                    ? `[Sistema] Alterações realizadas — ${alteracoes.join('; ')}.`
+                    : '[Sistema] Dados do chamado salvos sem alterações nos campos.';
+                await db.from('historico_chamados').insert([{ chamado_id: id, observacao }]);
                 formEdit.dataset.enderecoAnterior = enderecoNovo;
+                formEdit.dataset.dadosAnteriores = JSON.stringify(dadosAtuais);
                 Swal.fire('Sucesso', 'Chamado atualizado com sucesso!', 'success');
                 carregarHistoricoChamado(id);
                 if (lat && lon) {
@@ -940,7 +981,7 @@ async function carregarDadosChamadoUnico(id) {
     if (document.getElementById('detalhe_titulo')) document.getElementById('detalhe_titulo').value = data.titulo || '';
     if (document.getElementById('detalhe_status')) document.getElementById('detalhe_status').value = data.status || 'Criado';
     if (document.getElementById('detalhe_busca_endereco')) {
-        const enderecoCompleto = [data.rua, data.bairro, data.cidade].filter(Boolean).join(', ');
+        const enderecoCompleto = [data.rua, data.bairro, data.cidade, data.estado].filter(Boolean).join(', ');
         document.getElementById('detalhe_busca_endereco').value = enderecoCompleto;
         const formulario = document.getElementById('formEditarChamadoUnico');
         if (formulario) formulario.dataset.enderecoAnterior = enderecoCompleto;
@@ -958,6 +999,16 @@ async function carregarDadosChamadoUnico(id) {
     if (document.getElementById('detalhe_tecnico')) {
         document.getElementById('detalhe_tecnico').dataset.tecnicoAtual = data.tecnico_id || '';
         if (data.tecnico_id) document.getElementById('detalhe_tecnico').value = data.tecnico_id;
+    }
+
+    const formulario = document.getElementById('formEditarChamadoUnico');
+    if (formulario) {
+        formulario.dataset.dadosAnteriores = JSON.stringify({
+            cliente: data.cliente || '', filial: data.filial || '', titulo: data.titulo || '',
+            status: data.status || '', tecnico_id: data.tecnico_id || '',
+            endereco: [data.rua, data.bairro, data.cidade, data.estado].filter(Boolean).join(', '),
+            bairro: data.bairro || '', cidade: data.cidade || '', estado: data.estado || ''
+        });
     }
 
     if (data.localizacao) {
