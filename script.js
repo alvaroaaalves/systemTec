@@ -1092,7 +1092,20 @@ async function inicializarDetalhesChamado() {
 async function carregarTecnicosSelectDetalhe() {
     const select = document.getElementById('detalhe_tecnico');
     if (!select) return;
-    select.innerHTML = '<option value="">Calculando técnicos e distâncias...</option>';
+    select.innerHTML = '<option value="">Carregando técnicos...</option>';
+    const { data, error } = await db.from('tecnicos').select('id, nome, bairro, cidade').order('nome', { ascending: true });
+    if (error) {
+        console.error('Erro ao carregar técnicos do detalhe:', error);
+        select.innerHTML = '<option value="">Erro ao carregar técnicos</option>';
+        return;
+    }
+    select.innerHTML = '<option value="">Selecione um técnico</option>';
+    (data || []).forEach(t => {
+        const option = document.createElement('option');
+        option.value = t.id;
+        option.textContent = `${t.nome || 'Técnico'}${t.bairro ? ` — ${t.bairro}` : ''}`;
+        select.appendChild(option);
+    });
 }
 
 async function carregarDadosChamadoUnico(id) {
@@ -1103,7 +1116,9 @@ async function carregarDadosChamadoUnico(id) {
     }
 
     if (document.getElementById('tituloCardChamado')) {
-        document.getElementById('tituloCardChamado').textContent = `Editar Chamado #${data.id}`;
+        document.getElementById('tituloCardChamado').textContent = data.titulo ? data.titulo : 'Chamado';
+        const subtitulo = document.getElementById('subtituloIdChamado');
+        if (subtitulo) subtitulo.textContent = `ID: ${data.id}`;
     }
     if (document.getElementById('detalhe_cliente')) document.getElementById('detalhe_cliente').value = data.cliente || '';
     if (document.getElementById('detalhe_filial')) document.getElementById('detalhe_filial').value = data.filial || '';
@@ -1142,17 +1157,16 @@ async function carregarDadosChamadoUnico(id) {
         });
     }
 
-    if (data.localizacao) {
-        const match = data.localizacao.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
-        if (match) {
-            const lon = parseFloat(match[1]);
-            const lat = parseFloat(match[2]);
-            document.getElementById('detalhe_lat').value = lat;
-            document.getElementById('detalhe_lon').value = lon;
-            inicializarMapaDetalhe(lat, lon);
-        } else {
-            inicializarMapaDetalhe(-15.7801, -47.9292);
+    const coordenadasSalvas = extrairCoordenadasLocalizacao(data.localizacao);
+    if (coordenadasSalvas) {
+        document.getElementById('detalhe_lat').value = coordenadasSalvas.lat;
+        document.getElementById('detalhe_lon').value = coordenadasSalvas.lon;
+        const campoEndereco = document.getElementById('detalhe_busca_endereco');
+        if (campoEndereco) {
+            campoEndereco.dataset.lat = coordenadasSalvas.lat;
+            campoEndereco.dataset.lon = coordenadasSalvas.lon;
         }
+        inicializarMapaDetalhe(coordenadasSalvas.lat, coordenadasSalvas.lon);
     } else {
         inicializarMapaDetalhe(-15.7801, -47.9292);
     }
@@ -1209,6 +1223,15 @@ async function carregarHistoricoChamado(chamadoId) {
         return;
     }
 
+    const descricaoInicial = data.find(h => String(h.observacao || '').startsWith('[Sistema] Chamado criado'));
+    const campoDescricaoInicial = document.getElementById('detalhe_descricao_inicial');
+    if (campoDescricaoInicial) {
+        const marcador = 'Descrição inicial:';
+        const texto = String(descricaoInicial?.observacao || '');
+        const posicao = texto.indexOf(marcador);
+        campoDescricaoInicial.value = posicao >= 0 ? texto.slice(posicao + marcador.length).trim() : '';
+    }
+
     container.innerHTML = '';
     data.forEach(h => {
         const dataFormatada = new Date(h.criado_em).toLocaleString('pt-BR');
@@ -1228,22 +1251,35 @@ async function carregarTecnicosProximos(chamadoId) {
     if (!select) return;
 
     try {
-        const { data: tecnicos, error } = await db.rpc('tecnicos_proximos_chamado', { p_chamado_id: parseInt(chamadoId) });
-        if (error || !tecnicos || tecnicos.length === 0) {
-            select.innerHTML = '<option value="">Nenhum técnico próximo encontrado</option>';
-            return;
-        }
-
+        const { data: tecnicosProximos, error } = await db.rpc('tecnicos_proximos_chamado', { p_chamado_id: Number(chamadoId) });
+        if (error) console.warn('RPC de proximidade indisponível:', error.message);
+        const tecnicos = tecnicosProximos || [];
+        const tecnicoAtual = String(select.dataset.tecnicoAtual || '');
         select.innerHTML = '<option value="">Selecione um técnico por proximidade</option>';
-        tecnicos.forEach(t => {
-            const opt = document.createElement('option');
-            opt.value = t.id;
-            opt.textContent = `${t.nome} — ${Number(t.distancia_km).toFixed(2)} km (${t.bairro || 'Bairro não informado'})`;
-            if (String(t.id) === String(select.dataset.tecnicoAtual || '')) opt.selected = true;
-            select.appendChild(opt);
-        });
+
+        if (tecnicos.length) {
+            tecnicos.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                const distancia = Number(t.distancia_km);
+                opt.textContent = `${t.nome || 'Técnico'} — ${Number.isFinite(distancia) ? `${distancia.toFixed(2)} km` : 'distância indisponível'}${t.bairro ? ` (${t.bairro})` : ''}`;
+                if (String(t.id) === tecnicoAtual) opt.selected = true;
+                select.appendChild(opt);
+            });
+        } else {
+            const { data: todos } = await db.from('tecnicos').select('id, nome, bairro').order('nome', { ascending: true });
+            (todos || []).forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = `${t.nome || 'Técnico'} — distância indisponível${t.bairro ? ` (${t.bairro})` : ''}`;
+                if (String(t.id) === tecnicoAtual) opt.selected = true;
+                select.appendChild(opt);
+            });
+            if (!todos?.length) select.innerHTML = '<option value="">Nenhum técnico cadastrado</option>';
+        }
     } catch (err) {
         console.error('Erro ao buscar técnicos próximos:', err);
+        select.innerHTML = '<option value="">Não foi possível carregar técnicos</option>';
     }
 }
 
