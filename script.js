@@ -383,8 +383,11 @@ if (formTecnico) {
         const cnpj = document.getElementById('tec_cnpj').value;
         const contato = document.getElementById('tec_contato').value;
         const email = document.getElementById('tec_email').value;
-        const ferramentas = document.getElementById('tec_ferramentas').value;
-        const obs = document.getElementById('tec_obs').value;
+        const ferramentas = document.getElementById('tec_ferramentas').value
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean);
+        const observacaoTecnico = document.getElementById('tec_obs').value;
         
         const rua = document.getElementById('tec_rua').value;
         const bairro = document.getElementById('tec_bairro').value;
@@ -398,7 +401,8 @@ if (formTecnico) {
         const pontoGeo = (lat && lon) ? `POINT(${lon} ${lat})` : (tecnicoAnterior?.localizacao || null);
 
         const dadosTecnico = {
-            nome, cpf, cnpj, contato, email, ferramentas, obs,
+            nome, cpf, cnpj, contato, email, ferramentas,
+            observacao_tecnico: observacaoTecnico,
             rua, bairro, cidade, estado,
             localizacao: pontoGeo
         };
@@ -463,8 +467,8 @@ function editarTecnico(id) {
     document.getElementById('tec_cnpj').value = t.cnpj || '';
     document.getElementById('tec_contato').value = t.contato || '';
     document.getElementById('tec_email').value = t.email || '';
-    document.getElementById('tec_ferramentas').value = t.ferramentas || '';
-    document.getElementById('tec_obs').value = t.obs || '';
+    document.getElementById('tec_ferramentas').value = Array.isArray(t.ferramentas) ? t.ferramentas.join(', ') : (t.ferramentas || '');
+    document.getElementById('tec_obs').value = t.observacao_tecnico || '';
     
     document.getElementById('tec_rua').value = t.rua || '';
     document.getElementById('tec_bairro').value = t.bairro || '';
