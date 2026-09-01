@@ -618,6 +618,9 @@ async function excluirCliente(id) {
 // GESTÃO DE CHAMADOS (`chamados.html`)
 // -------------------------------------------------------------------------
 let timerBuscaChamado = null;
+let chamadosListaCache = [];
+let paginaChamadosAtual = 1;
+const ITENS_POR_PAGINA = 10;
 function sugerirEnderecosChamado(termo) {
     clearTimeout(timerBuscaChamado);
     const container = document.getElementById('sugestoesChamado');
@@ -703,6 +706,8 @@ if (formChamado) {
                 rua: document.getElementById('chamado_rua').value,
                 localizacao: pontoGeo,
                 tecnico_id: document.getElementById('chamado_tecnico').value || null,
+                prioridade: document.getElementById('chamado_prioridade')?.value || 'Média',
+                prazo: document.getElementById('chamado_prazo')?.value || null,
                 status: 'Criado'
             }]).select();
 
@@ -771,40 +776,73 @@ async function carregarTecnicosSelect() {
 async function carregarChamadosRecentes() {
     const tbody = document.getElementById('tabelaChamadosBody');
     if (!tbody) return;
-
-    tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Carregando chamados...</td></tr>';
-    const filtro = document.getElementById('filtroStatus')?.value || '';
-    let consulta = db.from('chamados').select('*').order('criado_em', { ascending: false }).limit(20);
-    if (filtro) consulta = consulta.eq('status', filtro);
-    const { data, error } = await consulta;
-
-    if (error || !data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Carregando chamados...</td></tr>';
+    const { data, error } = await db.from('chamados').select('*').order('criado_em', { ascending: false });
+    if (error) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-danger text-center">Erro: ${escapeHTML(error.message)}</td></tr>`;
         return;
     }
+    chamadosListaCache = data || [];
+    paginaChamadosAtual = 1;
+    renderizarPaginaChamados();
+}
 
-    tbody.innerHTML = '';
-    data.forEach(c => {
-        tbody.innerHTML += `
-            <tr style="cursor: pointer;" onclick="window.location.href='detalhes-chamado.html?id=${c.id}'">
-                <td>
-                    <strong>#${c.id} - ${escapeHTML(c.cliente)}</strong><br>
-                    <small class="text-muted">${escapeHTML(c.filial || '')} | ${escapeHTML(c.titulo)}</small>
-                </td>
-                <td>
-                    <select class="form-select form-select-sm" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onchange="alterarStatusChamado(${c.id}, this.value, event)">
-                        ${STATUS_OPCOES.map(status => `<option value="${status}" ${status === c.status ? 'selected' : ''}>${status}</option>`).join('')}
-                    </select>
-                </td>
-                <td>${escapeHTML(c.cidade || '-')}</td>
-            </tr>
-        `;
+function pesquisarChamados() {
+    paginaChamadosAtual = 1;
+    renderizarPaginaChamados();
+}
+
+function mudarPaginaChamados(delta) {
+    const busca = (document.getElementById('buscaChamados')?.value || '').trim().toLowerCase();
+    const filtro = document.getElementById('filtroStatus')?.value || '';
+    const filtrados = chamadosListaCache.filter(c => {
+        const texto = [c.id, c.cliente, c.filial, c.titulo, c.descricao, c.rua, c.bairro, c.cidade, c.estado].join(' ').toLowerCase();
+        return (!filtro || c.status === filtro) && (!busca || texto.includes(busca));
     });
+    const totalPaginas = Math.max(1, Math.ceil(filtrados.length / ITENS_POR_PAGINA));
+    paginaChamadosAtual = Math.min(totalPaginas, Math.max(1, paginaChamadosAtual + delta));
+    renderizarPaginaChamados();
+}
+
+function renderizarPaginaChamados() {
+    const tbody = document.getElementById('tabelaChamadosBody');
+    if (!tbody) return;
+    const busca = (document.getElementById('buscaChamados')?.value || '').trim().toLowerCase();
+    const filtro = document.getElementById('filtroStatus')?.value || '';
+    const filtrados = chamadosListaCache.filter(c => {
+        const texto = [c.id, c.cliente, c.filial, c.titulo, c.descricao, c.rua, c.bairro, c.cidade, c.estado].join(' ').toLowerCase();
+        return (!filtro || c.status === filtro) && (!busca || texto.includes(busca));
+    });
+    const inicio = (paginaChamadosAtual - 1) * ITENS_POR_PAGINA;
+    const pagina = filtrados.slice(inicio, inicio + ITENS_POR_PAGINA);
+    if (!pagina.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>';
+    } else {
+        tbody.innerHTML = pagina.map(c => {
+            const prazo = c.prazo ? new Date(c.prazo).toLocaleString('pt-BR') : '-';
+            return `<tr style="cursor:pointer" onclick="window.location.href='detalhes-chamado.html?id=${encodeURIComponent(c.id)}'">
+                <td><strong>#${escapeHTML(c.id)} - ${escapeHTML(c.cliente || '')}</strong><br><small class="text-muted">${escapeHTML(c.filial || '')} | ${escapeHTML(c.titulo || '')}</small><br><small>${escapeHTML(c.rua || '')}</small></td>
+                <td><select class="form-select form-select-sm" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" onchange="alterarStatusChamado(${c.id}, this.value, event)">${STATUS_OPCOES.map(status => `<option value="${status}" ${status === c.status ? 'selected' : ''}>${status}</option>`).join('')}</select></td>
+                <td><span class="badge text-bg-${c.prioridade === 'Alta' ? 'danger' : c.prioridade === 'Baixa' ? 'secondary' : 'warning'}">${escapeHTML(c.prioridade || 'Média')}</span><br><small>${escapeHTML(prazo)}</small></td>
+                <td>${escapeHTML(c.cidade || '-')}</td>
+            </tr>`;
+        }).join('');
+    }
+    const totalPaginas = Math.max(1, Math.ceil(filtrados.length / ITENS_POR_PAGINA));
+    const info = document.getElementById('paginacaoInfo');
+    if (info) info.textContent = filtrados.length ? `Página ${paginaChamadosAtual} de ${totalPaginas} — ${filtrados.length} chamado(s)` : '';
+    const anterior = document.getElementById('paginaAnterior');
+    const proxima = document.getElementById('paginaProxima');
+    if (anterior) anterior.disabled = paginaChamadosAtual <= 1;
+    if (proxima) proxima.disabled = paginaChamadosAtual >= totalPaginas;
 }
 
 async function alterarStatusChamado(chamadoId, novoStatus, evento) {
     if (evento) evento.stopPropagation();
     if (!STATUS_OPCOES.includes(novoStatus)) return;
+    const chamadoAnterior = chamadosListaCache.find(c => String(c.id) === String(chamadoId));
+    const statusAnterior = chamadoAnterior?.status || '(vazio)';
+    if (statusAnterior === novoStatus) return;
 
     const { error } = await db.from('chamados')
         .update({ status: novoStatus })
@@ -819,7 +857,7 @@ async function alterarStatusChamado(chamadoId, novoStatus, evento) {
 
     await db.from('historico_chamados').insert([{
         chamado_id: chamadoId,
-        observacao: `[Sistema] Status alterado para '${novoStatus}'.`
+        observacao: `[Sistema] Status: de "${statusAnterior}" para "${novoStatus}".`
     }]);
 
     carregarChamadosRecentes();
@@ -961,6 +999,8 @@ async function inicializarDetalhesChamado() {
                 filial: document.getElementById('detalhe_filial').value,
                 titulo: document.getElementById('detalhe_titulo').value,
                 status: document.getElementById('detalhe_status').value,
+                prioridade: document.getElementById('detalhe_prioridade')?.value || 'Média',
+                prazo: document.getElementById('detalhe_prazo')?.value || null,
                 rua: document.getElementById('detalhe_rua').value,
                 bairro: document.getElementById('detalhe_bairro').value,
                 cidade: document.getElementById('detalhe_cidade').value,
@@ -984,6 +1024,8 @@ async function inicializarDetalhesChamado() {
                     filial: document.getElementById('detalhe_filial')?.value || '',
                     titulo: document.getElementById('detalhe_titulo')?.value || '',
                     status: document.getElementById('detalhe_status')?.value || '',
+                    prioridade: document.getElementById('detalhe_prioridade')?.value || '',
+                    prazo: document.getElementById('detalhe_prazo')?.value || '',
                     tecnico_id: document.getElementById('detalhe_tecnico')?.value || '',
                     endereco: enderecoNovo,
                     bairro: document.getElementById('detalhe_bairro')?.value || '',
@@ -992,7 +1034,7 @@ async function inicializarDetalhesChamado() {
                 };
                 const nomesCampos = {
                     cliente: 'Cliente', filial: 'Filial', titulo: 'Título / descrição',
-                    status: 'Status', tecnico_id: 'Técnico', endereco: 'Endereço', bairro: 'Bairro',
+                    status: 'Status', prioridade: 'Prioridade', prazo: 'Prazo', tecnico_id: 'Técnico', endereco: 'Endereço', bairro: 'Bairro',
                     cidade: 'Cidade', estado: 'Estado'
                 };
                 const alteracoes = [];
@@ -1068,6 +1110,8 @@ async function carregarDadosChamadoUnico(id) {
     if (document.getElementById('detalhe_filial')) document.getElementById('detalhe_filial').value = data.filial || '';
     if (document.getElementById('detalhe_titulo')) document.getElementById('detalhe_titulo').value = data.titulo || '';
     if (document.getElementById('detalhe_status')) document.getElementById('detalhe_status').value = data.status || 'Criado';
+    if (document.getElementById('detalhe_prioridade')) document.getElementById('detalhe_prioridade').value = data.prioridade || 'Média';
+    if (document.getElementById('detalhe_prazo')) document.getElementById('detalhe_prazo').value = data.prazo ? new Date(data.prazo).toISOString().slice(0, 16) : '';
     if (document.getElementById('detalhe_busca_endereco')) {
         const enderecoCompleto = [data.rua, data.bairro, data.cidade, data.estado].filter(Boolean).join(', ');
         document.getElementById('detalhe_busca_endereco').value = enderecoCompleto;
@@ -1093,7 +1137,7 @@ async function carregarDadosChamadoUnico(id) {
     if (formulario) {
         formulario.dataset.dadosAnteriores = JSON.stringify({
             cliente: data.cliente || '', filial: data.filial || '', titulo: data.titulo || '',
-            status: data.status || '', tecnico_id: data.tecnico_id || '',
+            status: data.status || '', prioridade: data.prioridade || 'Média', prazo: data.prazo || '', tecnico_id: data.tecnico_id || '',
             endereco: [data.rua, data.bairro, data.cidade, data.estado].filter(Boolean).join(', '),
             bairro: data.bairro || '', cidade: data.cidade || '', estado: data.estado || ''
         });
