@@ -561,7 +561,7 @@ if (formChamado) {
                 cliente: document.getElementById('chamado_cliente').value,
                 filial: document.getElementById('chamado_filial').value,
                 titulo: document.getElementById('chamado_titulo').value,
-                descricao: document.getElementById('chamado_descricao').value,
+                descricao: document.getElementById('chamado_problema').value,
                 estado: document.getElementById('chamado_estado').value,
                 cidade: document.getElementById('chamado_cidade').value,
                 bairro: document.getElementById('chamado_bairro').value,
@@ -609,7 +609,10 @@ async function carregarChamadosRecentes() {
     if (!tbody) return;
 
     tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Carregando chamados...</td></tr>';
-    const { data, error } = await db.from('chamados').select('*').order('criado_em', { ascending: false }).limit(20);
+    const filtro = document.getElementById('filtroStatus')?.value || '';
+    let consulta = db.from('chamados').select('*').order('criado_em', { ascending: false }).limit(20);
+    if (filtro) consulta = consulta.eq('status', filtro);
+    const { data, error } = await consulta;
 
     if (error || !data || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="3" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>';
@@ -624,11 +627,38 @@ async function carregarChamadosRecentes() {
                     <strong>#${c.id} - ${escapeHTML(c.cliente)}</strong><br>
                     <small class="text-muted">${escapeHTML(c.filial || '')} | ${escapeHTML(c.titulo)}</small>
                 </td>
-                <td><span class="badge ${obterBadgeStatus(c.status)}">${c.status}</span></td>
+                <td>
+                    <select class="form-select form-select-sm" onchange="alterarStatusChamado(${c.id}, this.value, event)">
+                        ${STATUS_OPCOES.map(status => `<option value="${status}" ${status === c.status ? 'selected' : ''}>${status}</option>`).join('')}
+                    </select>
+                </td>
                 <td>${escapeHTML(c.cidade || '-')}</td>
             </tr>
         `;
     });
+}
+
+async function alterarStatusChamado(chamadoId, novoStatus, evento) {
+    if (evento) evento.stopPropagation();
+    if (!STATUS_OPCOES.includes(novoStatus)) return;
+
+    const { error } = await db.from('chamados')
+        .update({ status: novoStatus })
+        .eq('id', chamadoId);
+
+    if (error) {
+        console.error('Erro ao atualizar status:', error);
+        Swal.fire('Erro', 'Não foi possível atualizar o status: ' + error.message, 'error');
+        carregarChamadosRecentes();
+        return;
+    }
+
+    await db.from('historico_chamados').insert([{
+        chamado_id: chamadoId,
+        observacao: `[Sistema] Status alterado para '${novoStatus}'.`
+    }]);
+
+    carregarChamadosRecentes();
 }
 
 // -------------------------------------------------------------------------
@@ -685,7 +715,8 @@ function selecionarSugestaoDetalhe(local) {
     const cidade = address.city || address.town || address.municipality || 'Cidade não informada';
     let estado = address.state || '';
 
-    // Neste HTML, detalhe_rua é o próprio campo digitável de endereço.
+    // O campo visível mostra o endereço completo; a rua fica separada para gravação.
+    document.getElementById('detalhe_busca_endereco').value = local.display_name || rua;
     document.getElementById('detalhe_rua').value = rua;
     document.getElementById('detalhe_bairro').value = bairro;
     document.getElementById('detalhe_cidade').value = cidade;
@@ -781,7 +812,7 @@ async function inicializarDetalhesChamado() {
 }
 
 async function carregarTecnicosSelectDetalhe() {
-    const select = document.getElementById('detalhe_tecnico_atribuido');
+    const select = document.getElementById('detalhe_tecnico');
     if (!select) return;
     const { data } = await db.from('tecnicos').select('id, nome, bairro');
     if (data) {
@@ -806,6 +837,9 @@ async function carregarDadosChamadoUnico(id) {
     if (document.getElementById('detalhe_filial')) document.getElementById('detalhe_filial').value = data.filial || '';
     if (document.getElementById('detalhe_titulo')) document.getElementById('detalhe_titulo').value = data.titulo || '';
     if (document.getElementById('detalhe_status')) document.getElementById('detalhe_status').value = data.status || 'Criado';
+    if (document.getElementById('detalhe_busca_endereco')) {
+        document.getElementById('detalhe_busca_endereco').value = [data.rua, data.bairro, data.cidade].filter(Boolean).join(', ');
+    }
     if (document.getElementById('detalhe_rua')) document.getElementById('detalhe_rua').value = data.rua || '';
     if (document.getElementById('detalhe_bairro')) document.getElementById('detalhe_bairro').value = data.bairro || '';
     if (document.getElementById('detalhe_cidade')) document.getElementById('detalhe_cidade').value = data.cidade || '';
@@ -816,8 +850,8 @@ async function carregarDadosChamadoUnico(id) {
         document.getElementById('detalhe_rua').value = data.rua || '';
     }
 
-    if (document.getElementById('detalhe_tecnico_atribuido') && data.tecnico_id) {
-        document.getElementById('detalhe_tecnico_atribuido').value = data.tecnico_id;
+    if (document.getElementById('detalhe_tecnico') && data.tecnico_id) {
+        document.getElementById('detalhe_tecnico').value = data.tecnico_id;
     }
 
     if (data.localizacao) {
