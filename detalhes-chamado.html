@@ -86,21 +86,11 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Técnico Responsável</label>
+                                <label class="form-label fw-bold">Técnico designado</label>
                                 <select id="detalhe_tecnico" class="form-select">
-                                    <option value="">Carregando...</option>
+                                    <option value="">Calculando técnicos e distâncias...</option>
                                 </select>
-                            </div>
-
-                            <div class="mb-3 p-3 bg-light border rounded">
-                                <label class="form-label fw-bold">Técnicos próximos do chamado</label>
-                                <select id="selectTecnicoProximo" class="form-select mb-2">
-                                    <option value="">Calculando distâncias...</option>
-                                </select>
-                                <button type="button" class="btn btn-outline-primary w-100" onclick="atribuirTecnicoProximo()">
-                                    Atribuir técnico próximo
-                                </button>
-                                <small class="text-muted d-block mt-2">A distância é calculada com base nas coordenadas do chamado e dos técnicos.</small>
+                                <small class="text-muted">O nome e a distância até o chamado aparecem no mesmo campo.</small>
                             </div>
 
                             <button type="submit" class="btn btn-success w-100">Salvar Alterações Gerais</button>
