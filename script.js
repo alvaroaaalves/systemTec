@@ -388,9 +388,11 @@ if (formTecnico) {
         const cidade = document.getElementById('tec_cidade').value;
         const estado = document.getElementById('tec_estado').value;
         
-        const lat = document.getElementById('tec_busca_endereco').dataset.lat;
-        const lon = document.getElementById('tec_busca_endereco').dataset.lon;
-        const pontoGeo = (lat && lon) ? `POINT(${lon} ${lat})` : null;
+        const campoEndereco = document.getElementById('tec_busca_endereco');
+        const lat = campoEndereco.dataset.lat;
+        const lon = campoEndereco.dataset.lon;
+        const tecnicoAnterior = id ? listaTecnicosCache.find(t => String(t.id) === String(id)) : null;
+        const pontoGeo = (lat && lon) ? `POINT(${lon} ${lat})` : (tecnicoAnterior?.localizacao || null);
 
         const dadosTecnico = {
             nome, cpf, cnpj, contato, email, ferramentas, obs,
@@ -465,7 +467,15 @@ function editarTecnico(id) {
     document.getElementById('tec_bairro').value = t.bairro || '';
     document.getElementById('tec_cidade').value = t.cidade || '';
     document.getElementById('tec_estado').value = t.estado || '';
-    document.getElementById('tec_busca_endereco').value = `${t.rua || ''}, ${t.bairro || ''} - ${t.cidade || ''}`;
+    const enderecoTecnico = [t.rua, t.bairro, t.cidade, t.estado].filter(Boolean).join(', ');
+    document.getElementById('tec_busca_endereco').value = enderecoTecnico;
+    document.getElementById('tec_busca_endereco').dataset.lat = '';
+    document.getElementById('tec_busca_endereco').dataset.lon = '';
+    const coordenadasTecnico = extrairCoordenadasLocalizacao(t.localizacao);
+    if (coordenadasTecnico) {
+        document.getElementById('tec_busca_endereco').dataset.lat = coordenadasTecnico.lat;
+        document.getElementById('tec_busca_endereco').dataset.lon = coordenadasTecnico.lon;
+    }
 
     document.getElementById('formTecnicoTitulo').textContent = 'Editar Técnico';
     document.getElementById('btnSalvarTecnico').textContent = 'Atualizar Técnico';
