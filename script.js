@@ -31,6 +31,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (paginaAtual === "clientes.html") {
         carregarListaClientes();
     } else if (paginaAtual === "chamados.html") {
+        const statusInicial = new URLSearchParams(window.location.search).get('status');
+        const filtroStatus = document.getElementById('filtroStatus');
+        if (filtroStatus && STATUS_OPCOES.includes(statusInicial)) filtroStatus.value = statusInicial;
         carregarClientesSelect('chamado_cliente');
         carregarTecnicosSelect();
         carregarChamadosRecentes();
@@ -780,6 +783,11 @@ async function carregarTecnicosSelect() {
             select.innerHTML += `<option value="${t.id}">${escapeHTML(t.nome)} (${escapeHTML(t.bairro)})</option>`;
         });
     }
+}
+
+function abrirChamadosComFiltro(status) {
+    const parametro = status ? `?status=${encodeURIComponent(status)}` : '';
+    window.location.href = `chamados.html${parametro}`;
 }
 
 async function carregarChamadosRecentes() {
