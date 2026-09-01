@@ -699,7 +699,6 @@ if (formChamado) {
                 cliente: document.getElementById('chamado_cliente').value,
                 filial: document.getElementById('chamado_filial').value,
                 titulo: document.getElementById('chamado_titulo').value,
-                descricao: document.getElementById('chamado_problema').value,
                 estado: document.getElementById('chamado_estado').value,
                 cidade: document.getElementById('chamado_cidade').value,
                 bairro: document.getElementById('chamado_bairro').value,
@@ -717,7 +716,7 @@ if (formChamado) {
                 if (novoChamado && novoChamado.length > 0) {
                     await db.from('historico_chamados').insert([{
                         chamado_id: novoChamado[0].id,
-                        observacao: '[Sistema] Chamado criado e registrado no sistema.'
+                        observacao: `[Sistema] Chamado criado e registrado no sistema. Descrição inicial: ${document.getElementById('chamado_problema').value.trim() || '(não informada)'}`
                     }]);
                 }
                 Swal.fire('Sucesso', 'Chamado criado com sucesso!', 'success');
@@ -796,7 +795,7 @@ function mudarPaginaChamados(delta) {
     const busca = (document.getElementById('buscaChamados')?.value || '').trim().toLowerCase();
     const filtro = document.getElementById('filtroStatus')?.value || '';
     const filtrados = chamadosListaCache.filter(c => {
-        const texto = [c.id, c.cliente, c.filial, c.titulo, c.descricao, c.rua, c.bairro, c.cidade, c.estado].join(' ').toLowerCase();
+        const texto = [c.id, c.cliente, c.filial, c.titulo, c.rua, c.bairro, c.cidade, c.estado].join(' ').toLowerCase();
         return (!filtro || c.status === filtro) && (!busca || texto.includes(busca));
     });
     const totalPaginas = Math.max(1, Math.ceil(filtrados.length / ITENS_POR_PAGINA));
@@ -810,7 +809,7 @@ function renderizarPaginaChamados() {
     const busca = (document.getElementById('buscaChamados')?.value || '').trim().toLowerCase();
     const filtro = document.getElementById('filtroStatus')?.value || '';
     const filtrados = chamadosListaCache.filter(c => {
-        const texto = [c.id, c.cliente, c.filial, c.titulo, c.descricao, c.rua, c.bairro, c.cidade, c.estado].join(' ').toLowerCase();
+        const texto = [c.id, c.cliente, c.filial, c.titulo, c.rua, c.bairro, c.cidade, c.estado].join(' ').toLowerCase();
         return (!filtro || c.status === filtro) && (!busca || texto.includes(busca));
     });
     const inicio = (paginaChamadosAtual - 1) * ITENS_POR_PAGINA;
