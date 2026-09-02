@@ -42,6 +42,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         inicializarDetalhesChamado();
     } else if (paginaAtual === "relatorios.html") {
         carregarDadosRelatorios();
+    } else if (paginaAtual === "usuarios.html") {
+        inicializarTelaUsuarios();
+    } else if (paginaAtual === "notificacoes.html") {
+        carregarNotificacoes();
+    } else if (paginaAtual === "portal-cliente.html") {
+        carregarPortalCliente();
     }
 });
 
@@ -109,11 +115,12 @@ if (formLogin) {
 
         definirCarregando(botao, true, 'Entrando...');
         try {
-            const { error } = await db.auth.signInWithPassword({ email, password: senha });
+            const { data: loginData, error } = await db.auth.signInWithPassword({ email, password: senha });
             if (error) {
                 Swal.fire('Erro', 'Erro ao fazer login: ' + error.message, 'error');
             } else {
-                window.location.href = 'dashboard.html';
+                const { data: clienteVinculado } = await db.from('clientes').select('id').eq('usuario_id', loginData.user.id).maybeSingle();
+                window.location.href = clienteVinculado ? 'portal-cliente.html' : 'dashboard.html';
             }
         } catch (err) {
             console.error('Erro inesperado no login:', err);
@@ -1344,6 +1351,85 @@ async function atribuirTecnicoProximo() {
         carregarDadosChamadoUnico(id);
         carregarHistoricoChamado(id);
     }
+}
+
+// -------------------------------------------------------------------------
+// USUÁRIOS E NOTIFICAÇÕES
+// -------------------------------------------------------------------------
+async function carregarPortalCliente() {
+    const tabela = document.getElementById('tabelaChamadosCliente');
+    const form = document.getElementById('formNovoChamadoCliente');
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return;
+    const { data: cliente, error: clienteError } = await db.from('clientes').select('id, nome, filial').eq('usuario_id', user.id).maybeSingle();
+    if (clienteError || !cliente) {
+        if (tabela) tabela.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Cliente não vinculado a este usuário.</td></tr>';
+        return;
+    }
+    const nome = document.getElementById('clientePortalNome');
+    if (nome) nome.textContent = cliente.nome;
+    const { data: chamados, error } = await db.from('chamados').select('id, titulo, filial, status, criado_em').eq('cliente_id', cliente.id).order('criado_em', { ascending: false });
+    if (tabela) tabela.innerHTML = error ? `<tr><td colspan="6" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((chamados || []).map(c => `<tr><td>#${c.id}</td><td>${escapeHTML(c.titulo)}</td><td>${escapeHTML(c.filial || '-')}</td><td><span class="badge ${obterBadgeStatus(c.status)}">${escapeHTML(c.status)}</span></td><td>${escapeHTML(new Date(c.criado_em).toLocaleString('pt-BR'))}</td><td><span class="text-muted small">Acompanhamento</span></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>');
+    if (form) form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const titulo = document.getElementById('cliente_chamado_titulo').value.trim();
+        const filial = document.getElementById('cliente_chamado_filial').value.trim();
+        const descricao = document.getElementById('cliente_chamado_descricao').value.trim();
+        const { data: novo, error: novoError } = await db.from('chamados').insert([{ cliente_id: cliente.id, cliente: cliente.nome, titulo: titulo || descricao, filial, status: 'Criado', prioridade: 'Média' }]).select('id').single();
+        if (novoError) { Swal.fire('Erro', novoError.message, 'error'); return; }
+        await db.from('historico_chamados').insert([{ chamado_id: novo.id, observacao: `[Sistema] Chamado aberto pelo cliente. Descrição: ${descricao}`, ...(await obterDadosUsuarioHistorico()) }]);
+        Swal.fire('Sucesso', 'Chamado aberto com sucesso.', 'success');
+        bootstrap.Modal.getInstance(document.getElementById('modalNovoChamadoCliente'))?.hide();
+        form.reset();
+        carregarPortalCliente();
+    });
+}
+
+async function inicializarTelaUsuarios() {
+    const tabela = document.getElementById('tabelaUsuariosBody');
+    const form = document.getElementById('formUsuario');
+    if (tabela) {
+        const { data, error } = await db.from('perfis_usuario').select('id, nome, email, perfil, ativo').order('nome');
+        tabela.innerHTML = error ? `<tr><td colspan="4" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((data || []).map(u => `<tr><td>${escapeHTML(u.nome)}</td><td>${escapeHTML(u.email)}</td><td>${escapeHTML(u.perfil)}</td><td>${u.ativo ? 'Ativo' : 'Inativo'}</td></tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">Nenhum usuário cadastrado.</td></tr>');
+    }
+    if (form) form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const nome = document.getElementById('usuario_nome').value.trim();
+        const email = document.getElementById('usuario_email').value.trim().toLowerCase();
+        const perfil = document.getElementById('usuario_perfil').value;
+        const { error } = await db.functions.invoke('convidar-usuario', { body: { nome, email, perfil } });
+        if (error) Swal.fire('Erro', error.message, 'error');
+        else { Swal.fire('Sucesso', 'Convite enviado por e-mail.', 'success'); form.reset(); }
+    });
+}
+
+async function carregarNotificacoes() {
+    const lista = document.getElementById('listaNotificacoes');
+    const contador = document.getElementById('contadorNotificacoes');
+    if (!lista) return;
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return;
+    const { data, error } = await db.from('notificacoes').select('*').eq('usuario_id', user.id).order('criado_em', { ascending: false }).limit(100);
+    if (error) { lista.innerHTML = `<div class="list-group-item text-danger">${escapeHTML(error.message)}</div>`; return; }
+    const naoLidas = (data || []).filter(n => !n.lida).length;
+    if (contador) contador.textContent = naoLidas;
+    lista.innerHTML = (data || []).map(n => `<button type="button" class="list-group-item list-group-item-action ${n.lida ? '' : 'list-group-item-primary'} text-start" onclick="marcarNotificacaoLida(${n.id}, this)"><div class="d-flex justify-content-between"><strong>${escapeHTML(n.titulo)}</strong><small>${escapeHTML(new Date(n.criado_em).toLocaleString('pt-BR'))}</small></div><div>${escapeHTML(n.mensagem)}</div>${n.link ? `<small class="text-primary">Abrir detalhes</small>` : ''}</button>`).join('') || '<div class="list-group-item text-muted text-center">Nenhuma notificação.</div>';
+}
+
+async function marcarNotificacaoLida(id, elemento) {
+    const { error } = await db.from('notificacoes').update({ lida: true }).eq('id', id);
+    if (!error && elemento) { elemento.classList.remove('list-group-item-primary'); carregarNotificacoes(); }
+}
+
+async function marcarTodasNotificacoesLidas() {
+    const { data: { user } } = await db.auth.getUser();
+    if (user) await db.from('notificacoes').update({ lida: true }).eq('usuario_id', user.id).eq('lida', false);
+    carregarNotificacoes();
+}
+
+async function criarNotificacao(usuarioId, titulo, mensagem, tipo = 'info', link = null) {
+    if (!usuarioId) return;
+    return db.from('notificacoes').insert([{ usuario_id: usuarioId, titulo, mensagem, tipo, link }]);
 }
 
 // -------------------------------------------------------------------------
