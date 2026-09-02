@@ -56,6 +56,17 @@ function escapeHTML(valor) {
         .replace(/'/g, '&#039;');
 }
 
+let usuarioHistoricoCache = null;
+async function obterDadosUsuarioHistorico() {
+    if (usuarioHistoricoCache) return usuarioHistoricoCache;
+    const { data: { user } } = await db.auth.getUser();
+    usuarioHistoricoCache = {
+        usuario_id: user?.id || null,
+        usuario_email: user?.email || 'Sistema'
+    };
+    return usuarioHistoricoCache;
+}
+
 function definirCarregando(botao, carregando, textoCarregando) {
     if (!botao) return;
     if (carregando) {
@@ -733,7 +744,8 @@ if (formChamado) {
                 if (novoChamado && novoChamado.length > 0) {
                     await db.from('historico_chamados').insert([{
                         chamado_id: novoChamado[0].id,
-                        observacao: `[Sistema] Chamado criado e registrado no sistema. Descrição inicial: ${document.getElementById('chamado_problema').value.trim() || '(não informada)'}`
+                        observacao: `[Sistema] Chamado criado e registrado no sistema. Descrição inicial: ${document.getElementById('chamado_problema').value.trim() || '(não informada)'}`,
+                        ...(await obterDadosUsuarioHistorico())
                     }]);
                 }
                 Swal.fire('Sucesso', 'Chamado criado com sucesso!', 'success');
@@ -878,7 +890,8 @@ async function alterarStatusChamado(chamadoId, novoStatus, evento) {
 
     await db.from('historico_chamados').insert([{
         chamado_id: chamadoId,
-        observacao: `[Sistema] Status: de "${statusAnterior}" para "${novoStatus}".`
+        observacao: `[Sistema] Status: de "${statusAnterior}" para "${novoStatus}".`,
+        ...(await obterDadosUsuarioHistorico())
     }]);
 
     carregarChamadosRecentes();
@@ -1077,7 +1090,7 @@ async function inicializarDetalhesChamado() {
                 const observacao = alteracoes.length
                     ? `[Sistema] Alterações realizadas — ${alteracoes.join('; ')}.`
                     : '[Sistema] Dados do chamado salvos sem alterações nos campos.';
-                await db.from('historico_chamados').insert([{ chamado_id: id, observacao }]);
+                await db.from('historico_chamados').insert([{ chamado_id: id, observacao, ...(await obterDadosUsuarioHistorico()) }]);
                 formEdit.dataset.enderecoAnterior = enderecoNovo;
                 formEdit.dataset.dadosAnteriores = JSON.stringify(dadosAtuais);
                 Swal.fire('Sucesso', 'Chamado atualizado com sucesso!', 'success');
@@ -1098,7 +1111,8 @@ async function inicializarDetalhesChamado() {
             const texto = document.getElementById('obs_texto').value;
             const { error } = await db.from('historico_chamados').insert([{
                 chamado_id: id,
-                observacao: texto
+                observacao: texto,
+                ...(await obterDadosUsuarioHistorico())
             }]);
 
             if (error) {
@@ -1261,6 +1275,7 @@ async function carregarHistoricoChamado(chamadoId) {
             <div class="list-group-item px-0">
                 <div class="d-flex w-100 justify-content-between">
                     <small class="text-muted">${escapeHTML(dataFormatada)}</small>
+                    <small class="text-primary">${escapeHTML(h.usuario_email || h.usuario_id || 'Sistema')}</small>
                 </div>
                 <p class="mb-1 small text-dark">${escapeHTML(h.observacao)}</p>
             </div>
@@ -1322,7 +1337,8 @@ async function atribuirTecnicoProximo() {
     } else {
         await db.from('historico_chamados').insert([{
             chamado_id: id,
-            observacao: `[Sistema] Técnico atribuído via geolocalização e status alterado para 'Em Atendimento'.`
+            observacao: `[Sistema] Técnico atribuído via geolocalização e status alterado para 'Em Atendimento'.`,
+            ...(await obterDadosUsuarioHistorico())
         }]);
         Swal.fire('Sucesso', 'Técnico atribuído com sucesso!', 'success');
         carregarDadosChamadoUnico(id);
