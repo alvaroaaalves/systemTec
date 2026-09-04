@@ -131,6 +131,52 @@ if (formLogin) {
     });
 }
 
+async function solicitarRecuperacaoSenha() {
+    const email = document.getElementById('recuperacao_email')?.value.trim().toLowerCase();
+    const botao = document.getElementById('btnRecuperarSenha');
+    if (!email) {
+        Swal.fire('Atenção', 'Informe o e-mail da conta.', 'warning');
+        return;
+    }
+    definirCarregando(botao, true, 'Enviando...');
+    try {
+        const { error } = await db.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/redefinir-senha.html`
+        });
+        if (error) throw error;
+        Swal.fire('E-mail enviado', 'Se a conta existir, você receberá um link para redefinir a senha.', 'success');
+    } catch (error) {
+        Swal.fire('Erro', error.message || 'Não foi possível enviar o e-mail.', 'error');
+    } finally {
+        definirCarregando(botao, false);
+    }
+}
+
+async function salvarNovaSenha() {
+    const senha = document.getElementById('nova_senha')?.value || '';
+    const confirmacao = document.getElementById('confirmar_senha')?.value || '';
+    if (senha.length < 8) {
+        Swal.fire('Atenção', 'A senha deve ter pelo menos 8 caracteres.', 'warning');
+        return;
+    }
+    if (senha !== confirmacao) {
+        Swal.fire('Atenção', 'As senhas não conferem.', 'warning');
+        return;
+    }
+    const botao = document.getElementById('btnSalvarNovaSenha');
+    definirCarregando(botao, true, 'Salvando...');
+    try {
+        const { error } = await db.auth.updateUser({ password: senha });
+        if (error) throw error;
+        await Swal.fire('Sucesso', 'Senha atualizada com sucesso.', 'success');
+        window.location.href = 'index.html';
+    } catch (error) {
+        Swal.fire('Erro', error.message || 'Não foi possível atualizar a senha.', 'error');
+    } finally {
+        definirCarregando(botao, false);
+    }
+}
+
 async function fazerLogout() {
     await db.auth.signOut();
     window.location.href = 'index.html';
