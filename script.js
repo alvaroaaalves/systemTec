@@ -1080,7 +1080,15 @@ async function inicializarDetalhesChamado() {
     const formEdicao = document.getElementById('formEditarChamadoUnico');
     const controleVisibilidade = document.getElementById('controleVisibilidadeObservacao');
     if (ehClientePortal) {
-        if (formEdicao) formEdicao.style.display = 'none';
+        if (formEdicao) {
+            formEdicao.querySelectorAll('input, select, textarea').forEach(campo => {
+                if (campo.type !== 'hidden') campo.disabled = true;
+            });
+            const botaoSalvar = formEdicao.querySelector('button[type="submit"]');
+            if (botaoSalvar) botaoSalvar.style.display = 'none';
+        }
+        const tituloFormulario = document.getElementById('tituloCardChamado');
+        if (tituloFormulario) tituloFormulario.textContent = 'Dados do Chamado';
         if (controleVisibilidade) controleVisibilidade.style.display = 'none';
     }
 
