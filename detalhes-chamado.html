@@ -29,8 +29,7 @@
             <div class="col-md-5 mb-4">
                 <div class="card shadow-sm border-0">
                     <div class="card-header bg-white py-3">
-                        <h5 class="card-title mb-1 fw-bold" id="tituloCardChamado">Chamado</h5>
-                        <small class="text-muted" id="subtituloIdChamado">ID: --</small>
+                        <h5 class="card-title mb-0 fw-bold" id="tituloCardChamado">Editar Chamado</h5>
                     </div>
                     <div class="card-body">
                         <form id="formEditarChamadoUnico">
@@ -51,9 +50,8 @@
                             <!-- Campo Único de Endereço (Busca + Salva Rua, Coordenadas e Mapa) -->
                             <div class="mb-3 position-relative">
                                 <label class="form-label fw-bold">Endereço / Localização</label>
-                                <input type="text" id="detalhe_busca_endereco" class="form-control" placeholder="Digite a rua, número ou bairro..." autocomplete="off" oninput="sugerirEnderecosDetalhe(this.value)">
+                                <input type="text" id="detalhe_rua" class="form-control" placeholder="Digite a rua, número ou bairro..." onkeyup="sugerirEnderecosDetalhe(this.value)">
                                 <div id="sugestoesDetalhe" class="list-group position-absolute w-100 shadow-sm" style="z-index: 1000;"></div>
-                                <input type="hidden" id="detalhe_rua">
                                 <input type="hidden" id="detalhe_lat">
                                 <input type="hidden" id="detalhe_lon">
                                 <input type="hidden" id="detalhe_estado">
@@ -75,21 +73,6 @@
                                 <textarea id="detalhe_titulo" class="form-control" rows="3"></textarea>
                             </div>
 
-                            <div class="row g-2 mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Prioridade</label>
-                                    <select id="detalhe_prioridade" class="form-select">
-                                        <option value="Baixa">Baixa</option>
-                                        <option value="Média">Média</option>
-                                        <option value="Alta">Alta</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Prazo de atendimento</label>
-                                    <input type="datetime-local" id="detalhe_prazo" class="form-control">
-                                </div>
-                            </div>
-
                             <div class="mb-3">
                                 <label class="form-label fw-bold">Status</label>
                                 <select id="detalhe_status" class="form-select">
@@ -102,11 +85,10 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label fw-bold">Técnico designado</label>
+                                <label class="form-label fw-bold">Técnico Responsável</label>
                                 <select id="detalhe_tecnico" class="form-select">
-                                    <option value="">Calculando técnicos e distâncias...</option>
+                                    <option value="">Carregando...</option>
                                 </select>
-                                <small class="text-muted">O nome e a distância até o chamado aparecem no mesmo campo.</small>
                             </div>
 
                             <button type="submit" class="btn btn-success w-100">Salvar Alterações Gerais</button>
@@ -117,17 +99,6 @@
 
             <!-- Coluna Direita: Histórico e Adição de Observações -->
             <div class="col-md-7">
-                <!-- Descrição inicial do chamado -->
-                <div class="card shadow-sm border-0 mb-4">
-                    <div class="card-header bg-white py-3">
-                        <h5 class="card-title mb-0 fw-bold">Descrição inicial</h5>
-                    </div>
-                    <div class="card-body">
-                        <textarea id="detalhe_descricao_inicial" class="form-control bg-light" rows="3" readonly placeholder="Descrição inicial não registrada."></textarea>
-                        <small class="text-muted d-block mt-2">Este campo não pode ser alterado. Novas informações devem ser adicionadas no histórico.</small>
-                    </div>
-                </div>
-
                 <!-- Adicionar Nova Observação -->
                 <div class="card shadow-sm border-0 mb-4">
                     <div class="card-header bg-white py-3">
@@ -137,6 +108,13 @@
                         <form id="formNovaObservacao">
                             <div class="mb-3">
                                 <textarea id="obs_texto" class="form-control" rows="3" placeholder="Digite o que foi feito, peças trocadas ou atualização do atendimento..." required></textarea>
+                            </div>
+                            <div id="controleVisibilidadeObservacao" class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="obs_visivel_cliente">
+                                <label class="form-check-label" for="obs_visivel_cliente">
+                                    Visível para o cliente
+                                </label>
+                                <div class="form-text">Desmarcado: observação interna, visível somente para a equipe.</div>
                             </div>
                             <button type="submit" class="btn btn-primary w-100">Gravar Atualização (Com Data/Hora)</button>
                         </form>
