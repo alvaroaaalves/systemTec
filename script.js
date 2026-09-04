@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const resultadoCliente = await db.from('clientes').select('id').eq('usuario_id', session.user.id).maybeSingle();
         clienteVinculado = resultadoCliente.data || null;
     }
-    if (clienteVinculado && !paginasPublicas.includes(paginaAtual) && paginaAtual !== 'portal-cliente.html') {
+    if (clienteVinculado && !paginasPublicas.includes(paginaAtual) && paginaAtual !== 'portal-cliente.html' && paginaAtual !== 'detalhes-chamado.html') {
         window.location.href = 'portal-cliente.html';
         return;
     }
@@ -1072,6 +1072,18 @@ async function inicializarDetalhesChamado() {
         return;
     }
 
+    const usuarioAtual = await db.auth.getUser();
+    const { data: clientePortal } = usuarioAtual.data.user
+        ? await db.from('clientes').select('id').eq('usuario_id', usuarioAtual.data.user.id).maybeSingle()
+        : { data: null };
+    const ehClientePortal = Boolean(clientePortal);
+    const formEdicao = document.getElementById('formEditarChamadoUnico');
+    const controleVisibilidade = document.getElementById('controleVisibilidadeObservacao');
+    if (ehClientePortal) {
+        if (formEdicao) formEdicao.style.display = 'none';
+        if (controleVisibilidade) controleVisibilidade.style.display = 'none';
+    }
+
     await carregarTecnicosSelectDetalhe();
     await carregarDadosChamadoUnico(id);
     await carregarHistoricoChamado(id);
@@ -1175,6 +1187,7 @@ async function inicializarDetalhesChamado() {
             const { error } = await db.from('historico_chamados').insert([{
                 chamado_id: id,
                 observacao: texto,
+                visivel_cliente: ehClientePortal || Boolean(document.getElementById('obs_visivel_cliente')?.checked),
                 ...(await obterDadosUsuarioHistorico())
             }]);
 
@@ -1425,7 +1438,7 @@ async function carregarPortalCliente() {
     const nome = document.getElementById('clientePortalNome');
     if (nome) nome.textContent = cliente.nome;
     const { data: chamados, error } = await db.from('chamados').select('id, titulo, filial, status, criado_em').eq('cliente_id', cliente.id).order('criado_em', { ascending: false });
-    if (tabela) tabela.innerHTML = error ? `<tr><td colspan="6" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((chamados || []).map(c => `<tr><td>#${c.id}</td><td>${escapeHTML(c.titulo)}</td><td>${escapeHTML(c.filial || '-')}</td><td><span class="badge ${obterBadgeStatus(c.status)}">${escapeHTML(c.status)}</span></td><td>${escapeHTML(new Date(c.criado_em).toLocaleString('pt-BR'))}</td><td><span class="text-muted small">Acompanhamento</span></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>');
+    if (tabela) tabela.innerHTML = error ? `<tr><td colspan="6" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((chamados || []).map(c => `<tr><td>#${c.id}</td><td>${escapeHTML(c.titulo)}</td><td>${escapeHTML(c.filial || '-')}</td><td><span class="badge ${obterBadgeStatus(c.status)}">${escapeHTML(c.status)}</span></td><td>${escapeHTML(new Date(c.criado_em).toLocaleString('pt-BR'))}</td><td><a class="btn btn-sm btn-outline-primary" href="detalhes-chamado.html?id=${c.id}">Ver</a></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>');
     if (form) form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const titulo = document.getElementById('cliente_chamado_titulo').value.trim();
@@ -1433,7 +1446,7 @@ async function carregarPortalCliente() {
         const descricao = document.getElementById('cliente_chamado_descricao').value.trim();
         const { data: novo, error: novoError } = await db.from('chamados').insert([{ cliente_id: cliente.id, cliente: cliente.nome, titulo: titulo || descricao, filial, status: 'Criado', prioridade: 'Média' }]).select('id').single();
         if (novoError) { Swal.fire('Erro', novoError.message, 'error'); return; }
-        await db.from('historico_chamados').insert([{ chamado_id: novo.id, observacao: `[Sistema] Chamado aberto pelo cliente. Descrição: ${descricao}`, ...(await obterDadosUsuarioHistorico()) }]);
+        await db.from('historico_chamados').insert([{ chamado_id: novo.id, observacao: `[Sistema] Chamado aberto pelo cliente. Descrição: ${descricao}`, visivel_cliente: true, ...(await obterDadosUsuarioHistorico()) }]);
         Swal.fire('Sucesso', 'Chamado aberto com sucesso.', 'success');
         bootstrap.Modal.getInstance(document.getElementById('modalNovoChamadoCliente'))?.hide();
         form.reset();
