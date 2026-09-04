@@ -142,7 +142,7 @@ async function solicitarRecuperacaoSenha() {
     definirCarregando(botao, true, 'Enviando...');
     try {
         const { error } = await db.auth.resetPasswordForEmail(email, {
-            redirectTo: `${window.location.origin}/redefinir-senha.html`
+            redirectTo: new URL('redefinir-senha.html', window.location.href).href
         });
         if (error) throw error;
         Swal.fire('E-mail enviado', 'Se a conta existir, você receberá um link para redefinir a senha.', 'success');
