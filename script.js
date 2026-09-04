@@ -14,7 +14,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data: { session } } = await db.auth.getSession();
     const paginaAtual = window.location.pathname.split("/").pop();
 
-    if (!session && paginaAtual !== "" && paginaAtual !== "index.html") {
+    const paginasPublicas = ['', 'index.html', 'recuperar-senha.html', 'redefinir-senha.html'];
+    if (!session && !paginasPublicas.includes(paginaAtual)) {
         window.location.href = "index.html";
         return;
     }
