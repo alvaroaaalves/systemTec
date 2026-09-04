@@ -19,8 +19,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.location.href = "index.html";
         return;
     }
+    let clienteVinculado = null;
+    if (session) {
+        const resultadoCliente = await db.from('clientes').select('id').eq('usuario_id', session.user.id).maybeSingle();
+        clienteVinculado = resultadoCliente.data || null;
+    }
+    if (clienteVinculado && !paginasPublicas.includes(paginaAtual) && paginaAtual !== 'portal-cliente.html') {
+        window.location.href = 'portal-cliente.html';
+        return;
+    }
     if (session && (paginaAtual === "" || paginaAtual === "index.html")) {
-        window.location.href = "dashboard.html";
+        window.location.href = clienteVinculado ? 'portal-cliente.html' : 'dashboard.html';
         return;
     }
 
