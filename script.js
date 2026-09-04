@@ -1417,7 +1417,7 @@ async function carregarPortalCliente() {
     const form = document.getElementById('formNovoChamadoCliente');
     const { data: { user } } = await db.auth.getUser();
     if (!user) return;
-    const { data: cliente, error: clienteError } = await db.from('clientes').select('id, nome, filial').eq('usuario_id', user.id).maybeSingle();
+    const { data: cliente, error: clienteError } = await db.from('clientes').select('id, nome').eq('usuario_id', user.id).maybeSingle();
     if (clienteError || !cliente) {
         if (tabela) tabela.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Cliente não vinculado a este usuário.</td></tr>';
         return;
