@@ -1040,7 +1040,8 @@ function selecionarSugestaoDetalhe(local) {
     const campoBusca = document.getElementById('detalhe_busca_endereco') || document.getElementById('detalhe_rua');
     if (campoBusca) campoBusca.value = enderecoCompleto || local.display_name || rua;
     const campoRua = document.getElementById('detalhe_rua');
-    if (campoRua) campoRua.value = rua;
+    // Quando detalhe_rua é o campo visível, preserve o endereço completo.
+    if (campoRua && campoRua !== campoBusca) campoRua.value = rua;
     document.getElementById('detalhe_bairro').value = bairro;
     document.getElementById('detalhe_cidade').value = cidade;
     document.getElementById('detalhe_estado').value = estado;
@@ -1256,15 +1257,18 @@ async function carregarDadosChamadoUnico(id) {
         const formulario = document.getElementById('formEditarChamadoUnico');
         if (formulario) formulario.dataset.enderecoAnterior = enderecoCompleto;
     }
-    if (document.getElementById('detalhe_rua')) document.getElementById('detalhe_rua').value = data.rua || '';
+    const campoRuaCarregado = document.getElementById('detalhe_rua');
+    const campoBuscaCarregado = document.getElementById('detalhe_busca_endereco');
+    if (campoRuaCarregado && !campoBuscaCarregado) {
+        campoRuaCarregado.value = [data.rua, data.bairro, data.cidade, data.estado].filter(Boolean).join(', ');
+    } else if (campoRuaCarregado) {
+        campoRuaCarregado.value = data.rua || '';
+    }
     if (document.getElementById('detalhe_bairro')) document.getElementById('detalhe_bairro').value = data.bairro || '';
     if (document.getElementById('detalhe_cidade')) document.getElementById('detalhe_cidade').value = data.cidade || '';
     if (document.getElementById('detalhe_estado')) document.getElementById('detalhe_estado').value = data.estado || '';
     if (document.getElementById('detalhe_descricao')) document.getElementById('detalhe_descricao').value = data.descricao || '';
     
-    if (document.getElementById('detalhe_rua')) {
-        document.getElementById('detalhe_rua').value = data.rua || '';
-    }
 
     if (document.getElementById('detalhe_tecnico')) {
         document.getElementById('detalhe_tecnico').dataset.tecnicoAtual = data.tecnico_id || '';
