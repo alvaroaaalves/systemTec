@@ -1035,9 +1035,12 @@ function selecionarSugestaoDetalhe(local) {
     let estado = address.state || '';
     const enderecoCompleto = [rua, bairro, cidade, estado].filter(Boolean).join(', ');
 
-    // O campo visível mostra a rua com número e os demais componentes do endereço.
-    document.getElementById('detalhe_busca_endereco').value = enderecoCompleto || local.display_name || rua;
-    document.getElementById('detalhe_rua').value = rua;
+    // A tela atual usa detalhe_rua como campo visível. Mantemos compatibilidade
+    // caso uma versão antiga ainda contenha detalhe_busca_endereco.
+    const campoBusca = document.getElementById('detalhe_busca_endereco') || document.getElementById('detalhe_rua');
+    if (campoBusca) campoBusca.value = enderecoCompleto || local.display_name || rua;
+    const campoRua = document.getElementById('detalhe_rua');
+    if (campoRua) campoRua.value = rua;
     document.getElementById('detalhe_bairro').value = bairro;
     document.getElementById('detalhe_cidade').value = cidade;
     document.getElementById('detalhe_estado').value = estado;
@@ -1246,9 +1249,10 @@ async function carregarDadosChamadoUnico(id) {
     if (document.getElementById('detalhe_status')) document.getElementById('detalhe_status').value = data.status || 'Criado';
     if (document.getElementById('detalhe_prioridade')) document.getElementById('detalhe_prioridade').value = data.prioridade || 'Média';
     if (document.getElementById('detalhe_prazo')) document.getElementById('detalhe_prazo').value = data.prazo ? new Date(data.prazo).toISOString().slice(0, 16) : '';
-    if (document.getElementById('detalhe_busca_endereco')) {
+    {
         const enderecoCompleto = [data.rua, data.bairro, data.cidade, data.estado].filter(Boolean).join(', ');
-        document.getElementById('detalhe_busca_endereco').value = enderecoCompleto;
+        const campoEndereco = document.getElementById('detalhe_busca_endereco') || document.getElementById('detalhe_rua');
+        if (campoEndereco) campoEndereco.value = enderecoCompleto;
         const formulario = document.getElementById('formEditarChamadoUnico');
         if (formulario) formulario.dataset.enderecoAnterior = enderecoCompleto;
     }
@@ -1281,7 +1285,7 @@ async function carregarDadosChamadoUnico(id) {
     if (coordenadasSalvas) {
         document.getElementById('detalhe_lat').value = coordenadasSalvas.lat;
         document.getElementById('detalhe_lon').value = coordenadasSalvas.lon;
-        const campoEndereco = document.getElementById('detalhe_busca_endereco');
+        const campoEndereco = document.getElementById('detalhe_busca_endereco') || document.getElementById('detalhe_rua');
         if (campoEndereco) {
             campoEndereco.dataset.lat = coordenadasSalvas.lat;
             campoEndereco.dataset.lon = coordenadasSalvas.lon;
