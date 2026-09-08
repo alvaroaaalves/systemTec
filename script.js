@@ -54,6 +54,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         carregarDadosRelatorios();
     } else if (paginaAtual === "usuarios.html") {
         inicializarTelaUsuarios();
+    } else if (paginaAtual === "configuracoes.html") {
+        inicializarConfiguracoes();
     } else if (paginaAtual === "notificacoes.html") {
         carregarNotificacoes();
     } else if (paginaAtual === "portal-cliente.html") {
@@ -1441,33 +1443,191 @@ async function atribuirTecnicoProximo() {
 // -------------------------------------------------------------------------
 // USUÁRIOS E NOTIFICAÇÕES
 // -------------------------------------------------------------------------
+async function carregarProblemasPortal() {
+    const select = document.getElementById('cliente_chamado_problema');
+    if (!select) return;
+    const { data, error } = await db.from('problemas').select('id, nome').eq('ativo', true).order('nome');
+    if (error) {
+        select.innerHTML = '<option value="">Erro ao carregar problemas</option>';
+        console.error('Erro ao carregar problemas:', error);
+        return;
+    }
+    select.innerHTML = '<option value="">Selecione o problema...</option>';
+    (data || []).forEach(p => {
+        select.innerHTML += `<option value="${p.id}">${escapeHTML(p.nome)}</option>`;
+    });
+}
+
+async function carregarFiliaisPortal(clienteId) {
+    const select = document.getElementById('cliente_chamado_filial_id');
+    if (!select) return;
+    const { data, error } = await db.from('filiais_clientes').select('id, nome, rua, bairro, cidade, estado').eq('cliente_id', clienteId).eq('ativo', true).order('nome');
+    if (error) {
+        select.innerHTML = '<option value="">Erro ao carregar filiais</option><option value="__nova__">+ Cadastrar nova filial</option>';
+        console.error('Erro ao carregar filiais:', error);
+        return;
+    }
+    select.innerHTML = '<option value="">Selecione a filial...</option>';
+    (data || []).forEach(f => {
+        const endereco = [f.rua, f.bairro, f.cidade, f.estado].filter(Boolean).join(', ');
+        select.innerHTML += `<option value="${f.id}">${escapeHTML(f.nome)}${endereco ? ` — ${escapeHTML(endereco)}` : ''}</option>`;
+    });
+    select.innerHTML += '<option value="__nova__">+ Cadastrar nova filial</option>';
+}
+
+let timerBuscaNovaFilial = null;
+function sugerirEnderecosNovaFilial(termo) {
+    clearTimeout(timerBuscaNovaFilial);
+    const container = document.getElementById('sugestoesNovaFilial');
+    if (!container) return;
+    if (!termo || termo.length < 3) { container.innerHTML = ''; return; }
+    timerBuscaNovaFilial = setTimeout(async () => {
+        try {
+            const resposta = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(termo)}`);
+            const locais = await resposta.json();
+            container.innerHTML = '';
+            (locais || []).forEach(local => {
+                const item = document.createElement('button');
+                item.type = 'button';
+                item.className = 'list-group-item list-group-item-action small text-start';
+                item.textContent = local.display_name;
+                item.addEventListener('mousedown', event => {
+                    event.preventDefault();
+                    const a = local.address || {};
+                    document.getElementById('nova_filial_rua').value = [a.road || a.street, a.house_number].filter(Boolean).join(', ') || local.display_name;
+                    document.getElementById('nova_filial_bairro').value = a.suburb || a.neighbourhood || a.city_district || '';
+                    document.getElementById('nova_filial_cidade').value = a.city || a.town || a.municipality || '';
+                    document.getElementById('nova_filial_estado').value = a.state || '';
+                    document.getElementById('nova_filial_lat').value = local.lat || '';
+                    document.getElementById('nova_filial_lon').value = local.lon || '';
+                    container.innerHTML = '';
+                });
+                container.appendChild(item);
+            });
+        } catch (error) { console.error('Erro na busca de endereço da filial:', error); }
+    }, 400);
+}
+
 async function carregarPortalCliente() {
     const tabela = document.getElementById('tabelaChamadosCliente');
     const form = document.getElementById('formNovoChamadoCliente');
     const { data: { user } } = await db.auth.getUser();
     if (!user) return;
-    const { data: cliente, error: clienteError } = await db.from('clientes').select('id, nome').eq('usuario_id', user.id).maybeSingle();
+    const { data: cliente, error: clienteError } = await db.from('clientes').select('id, nome, sla_horas').eq('usuario_id', user.id).maybeSingle();
     if (clienteError || !cliente) {
         if (tabela) tabela.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Cliente não vinculado a este usuário.</td></tr>';
         return;
     }
     const nome = document.getElementById('clientePortalNome');
-    if (nome) nome.textContent = cliente.nome;
-    const { data: chamados, error } = await db.from('chamados').select('id, titulo, filial, status, criado_em').eq('cliente_id', cliente.id).order('criado_em', { ascending: false });
-    if (tabela) tabela.innerHTML = error ? `<tr><td colspan="6" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((chamados || []).map(c => `<tr><td>#${c.id}</td><td>${escapeHTML(c.titulo)}</td><td>${escapeHTML(c.filial || '-')}</td><td><span class="badge ${obterBadgeStatus(c.status)}">${escapeHTML(c.status)}</span></td><td>${escapeHTML(new Date(c.criado_em).toLocaleString('pt-BR'))}</td><td><a class="btn btn-sm btn-outline-primary" href="detalhes-chamado.html?id=${c.id}">Ver</a></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>');
-    if (form) form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const titulo = document.getElementById('cliente_chamado_titulo').value.trim();
-        const filial = document.getElementById('cliente_chamado_filial').value.trim();
-        const descricao = document.getElementById('cliente_chamado_descricao').value.trim();
-        const { data: novo, error: novoError } = await db.from('chamados').insert([{ cliente_id: cliente.id, cliente: cliente.nome, titulo: titulo || descricao, filial, status: 'Criado', prioridade: 'Média' }]).select('id').single();
-        if (novoError) { Swal.fire('Erro', novoError.message, 'error'); return; }
-        await db.from('historico_chamados').insert([{ chamado_id: novo.id, observacao: `[Sistema] Chamado aberto pelo cliente. Descrição: ${descricao}`, visivel_cliente: true, ...(await obterDadosUsuarioHistorico()) }]);
-        Swal.fire('Sucesso', 'Chamado aberto com sucesso.', 'success');
-        bootstrap.Modal.getInstance(document.getElementById('modalNovoChamadoCliente'))?.hide();
-        form.reset();
-        carregarPortalCliente();
-    });
+    if (nome) nome.textContent = `${cliente.nome} — SLA: ${cliente.sla_horas || 24} horas`;
+    await Promise.all([carregarProblemasPortal(), carregarFiliaisPortal(cliente.id)]);
+    const seletorFilial = document.getElementById('cliente_chamado_filial_id');
+    const blocoNovaFilial = document.getElementById('formNovaFilialCliente');
+    if (seletorFilial && !seletorFilial.dataset.configurado) {
+        seletorFilial.dataset.configurado = 'true';
+        seletorFilial.addEventListener('change', () => {
+            if (blocoNovaFilial) blocoNovaFilial.style.display = seletorFilial.value === '__nova__' ? 'block' : 'none';
+        });
+    }
+    const { data: chamados, error } = await db.from('chamados').select('id, titulo, descricao, filial, filial_id, problemas(nome), filiais_clientes(nome), status, criado_em').eq('cliente_id', cliente.id).order('criado_em', { ascending: false });
+    if (tabela) tabela.innerHTML = error ? `<tr><td colspan="6" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((chamados || []).map(c => `<tr><td>#${c.id}</td><td>${escapeHTML(c.problemas?.nome || c.titulo || '-')}</td><td>${escapeHTML(c.filiais_clientes?.nome || c.filial || '-')}</td><td><span class="badge ${obterBadgeStatus(c.status)}">${escapeHTML(c.status)}</span></td><td>${escapeHTML(new Date(c.criado_em).toLocaleString('pt-BR'))}</td><td><a class="btn btn-sm btn-outline-primary" href="detalhes-chamado.html?id=${c.id}">Ver</a></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>');
+    if (form && !form.dataset.configurado) {
+        form.dataset.configurado = 'true';
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const problemaId = document.getElementById('cliente_chamado_problema')?.value;
+            const filialSelecionada = document.getElementById('cliente_chamado_filial_id')?.value;
+            const descricao = document.getElementById('cliente_chamado_descricao').value.trim();
+            if (!problemaId || !filialSelecionada || !descricao) { Swal.fire('Atenção', 'Informe problema, filial e descrição.', 'warning'); return; }
+            let filialId = filialSelecionada;
+            let filialNome = '';
+            if (filialSelecionada === '__nova__') {
+                filialNome = document.getElementById('nova_filial_nome').value.trim();
+                if (!filialNome) { Swal.fire('Atenção', 'Informe o nome da nova filial.', 'warning'); return; }
+                const novaFilial = {
+                    cliente_id: cliente.id, nome: filialNome,
+                    rua: document.getElementById('nova_filial_rua').value.trim(),
+                    bairro: document.getElementById('nova_filial_bairro').value.trim(),
+                    cidade: document.getElementById('nova_filial_cidade').value.trim(),
+                    estado: document.getElementById('nova_filial_estado').value.trim(),
+                    cep: document.getElementById('nova_filial_cep').value.trim(),
+                    localizacao: document.getElementById('nova_filial_lat').value && document.getElementById('nova_filial_lon').value ? `POINT(${document.getElementById('nova_filial_lon').value} ${document.getElementById('nova_filial_lat').value})` : null
+                };
+                const { data: filialCriada, error: filialError } = await db.from('filiais_clientes').insert([novaFilial]).select('id').single();
+                if (filialError) { Swal.fire('Erro', filialError.message, 'error'); return; }
+                filialId = filialCriada.id;
+            }
+            const prazo = new Date(Date.now() + (Number(cliente.sla_horas || 24) * 60 * 60 * 1000)).toISOString();
+            const { data: novo, error: novoError } = await db.from('chamados').insert([{
+                cliente_id: cliente.id, cliente: cliente.nome, problema_id: problemaId, filial_id: filialId,
+                filial: filialNome, titulo: descricao, descricao, status: 'Criado', prioridade: 'Média',
+                sla_horas_aplicado: Number(cliente.sla_horas || 24), prazo
+            }]).select('id').single();
+            if (novoError) { Swal.fire('Erro', novoError.message, 'error'); return; }
+            await db.from('historico_chamados').insert([{ chamado_id: novo.id, observacao: `[Sistema] Chamado aberto pelo cliente. Descrição: ${descricao}`, visivel_cliente: true, ...(await obterDadosUsuarioHistorico()) }]);
+            Swal.fire('Sucesso', 'Chamado aberto com sucesso.', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalNovoChamadoCliente'))?.hide();
+            form.reset();
+            if (blocoNovaFilial) blocoNovaFilial.style.display = 'none';
+            await carregarPortalCliente();
+        });
+    }
+}
+
+async function inicializarConfiguracoes() {
+    const clienteSelect = document.getElementById('config_cliente_id');
+    const tabela = document.getElementById('tabelaProblemasBody');
+    const formSla = document.getElementById('formSlaCliente');
+    const formProblema = document.getElementById('formProblema');
+
+    if (clienteSelect) {
+        const { data, error } = await db.from('clientes').select('id, nome, sla_horas').order('nome');
+        clienteSelect.innerHTML = error ? '<option value="">Erro ao carregar clientes</option>' : '<option value="">Selecione o cliente...</option>';
+        (data || []).forEach(c => {
+            const option = document.createElement('option');
+            option.value = c.id;
+            option.textContent = `${c.nome} — SLA atual: ${c.sla_horas || 24}h`;
+            option.dataset.sla = c.sla_horas || 24;
+            clienteSelect.appendChild(option);
+        });
+        clienteSelect.addEventListener('change', () => {
+            const option = clienteSelect.options[clienteSelect.selectedIndex];
+            const campo = document.getElementById('config_sla_horas');
+            if (campo && option?.dataset.sla) campo.value = option.dataset.sla;
+        });
+    }
+
+    async function listarProblemas() {
+        if (!tabela) return;
+        const { data, error } = await db.from('problemas').select('id, nome, ativo').order('nome');
+        tabela.innerHTML = error ? `<tr><td colspan="3" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((data || []).map(p => `<tr><td>${escapeHTML(p.nome)}</td><td>${p.ativo ? 'Ativo' : 'Inativo'}</td><td class="text-end"><button class="btn btn-sm ${p.ativo ? 'btn-outline-warning' : 'btn-outline-success'}" onclick="alternarProblema(${p.id}, ${p.ativo})">${p.ativo ? 'Desativar' : 'Ativar'}</button></td></tr>`).join('') || '<tr><td colspan="3" class="text-muted text-center">Nenhum problema cadastrado.</td></tr>');
+    }
+    await listarProblemas();
+    window.alternarProblema = async (id, ativo) => {
+        const { error } = await db.from('problemas').update({ ativo: !ativo, atualizado_em: new Date().toISOString() }).eq('id', id);
+        if (error) Swal.fire('Erro', error.message, 'error'); else listarProblemas();
+    };
+    if (formSla && !formSla.dataset.configurado) {
+        formSla.dataset.configurado = 'true';
+        formSla.addEventListener('submit', async event => {
+            event.preventDefault();
+            const clienteId = clienteSelect?.value;
+            const sla = Number(document.getElementById('config_sla_horas')?.value);
+            if (!clienteId || !Number.isInteger(sla) || sla < 1) return Swal.fire('Atenção', 'Selecione o cliente e informe um SLA válido.', 'warning');
+            const { error } = await db.from('clientes').update({ sla_horas: sla }).eq('id', clienteId);
+            if (error) Swal.fire('Erro', error.message, 'error'); else { Swal.fire('Sucesso', 'SLA atualizado.', 'success'); inicializarConfiguracoes(); }
+        });
+    }
+    if (formProblema && !formProblema.dataset.configurado) {
+        formProblema.dataset.configurado = 'true';
+        formProblema.addEventListener('submit', async event => {
+            event.preventDefault();
+            const nome = document.getElementById('problema_nome')?.value.trim();
+            if (!nome) return;
+            const { error } = await db.from('problemas').insert([{ nome }]);
+            if (error) Swal.fire('Erro', error.message, 'error'); else { formProblema.reset(); listarProblemas(); }
+        });
+    }
 }
 
 async function inicializarTelaUsuarios() {
