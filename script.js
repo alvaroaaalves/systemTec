@@ -638,6 +638,25 @@ if (formCliente) {
 
 let timerBuscaFilialDetalhe = null;
 
+function preencherEnderecoFilialDetalhe(local, termoOriginal) {
+    const address = local.address || {};
+    const numeroDigitado = typeof extrairNumeroEndereco === 'function' ? extrairNumeroEndereco(termoOriginal) : '';
+    const nomeRua = address.road || address.street || address.pedestrian || 'Endereço não especificado';
+    const numero = address.house_number || numeroDigitado || '';
+    const rua = numero ? `${nomeRua}, ${numero}` : nomeRua;
+    const bairro = address.suburb || address.neighbourhood || address.city_district || '';
+    const cidade = address.city || address.town || address.municipality || '';
+    const estado = address.state || '';
+    const enderecoCompleto = [rua, bairro, cidade, estado].filter(Boolean).join(', ') || local.display_name || rua;
+    document.getElementById('filial_detalhe_rua').value = enderecoCompleto;
+    document.getElementById('filial_detalhe_bairro').value = bairro;
+    document.getElementById('filial_detalhe_cidade').value = cidade;
+    document.getElementById('filial_detalhe_estado').value = estado;
+    document.getElementById('filial_detalhe_lat').value = local.lat || '';
+    document.getElementById('filial_detalhe_lon').value = local.lon || '';
+    document.getElementById('sugestoesFilialDetalhe').innerHTML = '';
+}
+
 function sugerirEnderecoFilialDetalhe(termo) {
     clearTimeout(timerBuscaFilialDetalhe);
     const container = document.getElementById('sugestoesFilialDetalhe');
@@ -650,18 +669,12 @@ function sugerirEnderecoFilialDetalhe(termo) {
             container.innerHTML = '';
             (locais || []).forEach(local => {
                 const item = document.createElement('button');
-                item.type = 'button'; item.className = 'list-group-item list-group-item-action small text-start'; item.textContent = local.display_name;
-                item.addEventListener('mousedown', event => {
-                    event.preventDefault();
-                    const a = local.address || {};
-                    document.getElementById('filial_detalhe_rua').value = [a.road || a.street, a.house_number].filter(Boolean).join(', ') || local.display_name;
-                    document.getElementById('filial_detalhe_bairro').value = a.suburb || a.neighbourhood || a.city_district || '';
-                    document.getElementById('filial_detalhe_cidade').value = a.city || a.town || a.municipality || '';
-                    document.getElementById('filial_detalhe_estado').value = a.state || '';
-                    document.getElementById('filial_detalhe_lat').value = local.lat || '';
-                    document.getElementById('filial_detalhe_lon').value = local.lon || '';
-                    container.innerHTML = '';
-                });
+                item.type = 'button';
+                item.className = 'list-group-item list-group-item-action list-group-item-light small w-100 text-start border-0';
+                item.textContent = typeof formatarEnderecoSugestao === 'function' ? formatarEnderecoSugestao(local, termo) : local.display_name;
+                const selecionar = event => { event.preventDefault(); preencherEnderecoFilialDetalhe(local, termo); };
+                item.addEventListener('pointerdown', selecionar);
+                item.addEventListener('click', selecionar);
                 container.appendChild(item);
             });
         } catch (error) { console.error('Erro ao buscar endereço da filial:', error); }
