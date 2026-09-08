@@ -40,6 +40,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         carregarListaTecnicos();
     } else if (paginaAtual === "clientes.html") {
         carregarListaClientes();
+    } else if (paginaAtual === "cliente-detalhes.html") {
+        inicializarDetalheCliente();
     } else if (paginaAtual === "chamados.html") {
         const statusInicial = new URLSearchParams(window.location.search).get('status');
         const filtroStatus = document.getElementById('filtroStatus');
@@ -634,6 +636,98 @@ if (formCliente) {
     });
 }
 
+let timerBuscaFilialDetalhe = null;
+
+function sugerirEnderecoFilialDetalhe(termo) {
+    clearTimeout(timerBuscaFilialDetalhe);
+    const container = document.getElementById('sugestoesFilialDetalhe');
+    if (!container) return;
+    if (!termo || termo.length < 3) { container.innerHTML = ''; return; }
+    timerBuscaFilialDetalhe = setTimeout(async () => {
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(termo)}`);
+            const locais = await response.json();
+            container.innerHTML = '';
+            (locais || []).forEach(local => {
+                const item = document.createElement('button');
+                item.type = 'button'; item.className = 'list-group-item list-group-item-action small text-start'; item.textContent = local.display_name;
+                item.addEventListener('mousedown', event => {
+                    event.preventDefault();
+                    const a = local.address || {};
+                    document.getElementById('filial_detalhe_rua').value = [a.road || a.street, a.house_number].filter(Boolean).join(', ') || local.display_name;
+                    document.getElementById('filial_detalhe_bairro').value = a.suburb || a.neighbourhood || a.city_district || '';
+                    document.getElementById('filial_detalhe_cidade').value = a.city || a.town || a.municipality || '';
+                    document.getElementById('filial_detalhe_estado').value = a.state || '';
+                    document.getElementById('filial_detalhe_lat').value = local.lat || '';
+                    document.getElementById('filial_detalhe_lon').value = local.lon || '';
+                    container.innerHTML = '';
+                });
+                container.appendChild(item);
+            });
+        } catch (error) { console.error('Erro ao buscar endereço da filial:', error); }
+    }, 400);
+}
+
+function limparFormularioFilial() {
+    const form = document.getElementById('formFilialCliente');
+    if (form) form.reset();
+    const id = document.getElementById('filial_detalhe_id');
+    if (id) id.value = '';
+    const botao = form?.querySelector('button[type="submit"]');
+    if (botao) botao.textContent = 'Salvar filial';
+}
+
+async function inicializarDetalheCliente() {
+    const clienteId = Number(new URLSearchParams(window.location.search).get('id'));
+    if (!clienteId) { window.location.href = 'clientes.html'; return; }
+    const { data: cliente, error } = await db.from('clientes').select('*').eq('id', clienteId).single();
+    if (error || !cliente) { Swal.fire('Erro', error?.message || 'Cliente não encontrado.', 'error'); return; }
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = value ?? ''; };
+    set('cliente_detalhe_id', cliente.id); set('cliente_detalhe_nome', cliente.nome); set('cliente_detalhe_documento', cliente.documento); set('cliente_detalhe_contato', cliente.contato); set('cliente_detalhe_email', cliente.email); set('cliente_detalhe_sla', cliente.sla_horas || 24); set('cliente_detalhe_usuario_id', cliente.usuario_id);
+    const titulo = document.getElementById('tituloCliente'); if (titulo) titulo.textContent = cliente.nome || 'Cliente';
+    const subtitulo = document.getElementById('subtituloCliente'); if (subtitulo) subtitulo.textContent = `${cliente.email || 'Sem e-mail'}${cliente.contato ? ` — ${cliente.contato}` : ''}`;
+    const status = document.getElementById('statusCliente'); if (status) { status.textContent = cliente.usuario_id ? 'Usuário vinculado' : 'Sem usuário vinculado'; status.className = `badge ${cliente.usuario_id ? 'bg-success' : 'bg-warning text-dark'}`; }
+    const formClienteDetalhe = document.getElementById('formClienteDetalhe');
+    formClienteDetalhe?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const dados = { nome: document.getElementById('cliente_detalhe_nome').value.trim(), documento: document.getElementById('cliente_detalhe_documento').value.trim(), contato: document.getElementById('cliente_detalhe_contato').value.trim(), email: document.getElementById('cliente_detalhe_email').value.trim(), sla_horas: Number(document.getElementById('cliente_detalhe_sla').value), usuario_id: document.getElementById('cliente_detalhe_usuario_id').value.trim() || null };
+        const { error: salvarError } = await db.from('clientes').update(dados).eq('id', clienteId);
+        if (salvarError) Swal.fire('Erro', salvarError.message, 'error'); else Swal.fire('Sucesso', 'Dados do cliente atualizados.', 'success');
+    });
+    await carregarFiliaisClienteDetalhe(clienteId);
+    const formFilial = document.getElementById('formFilialCliente');
+    formFilial?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const filialId = document.getElementById('filial_detalhe_id').value;
+        const lat = document.getElementById('filial_detalhe_lat').value; const lon = document.getElementById('filial_detalhe_lon').value;
+        const dados = { cliente_id: clienteId, nome: document.getElementById('filial_detalhe_nome').value.trim(), cep: document.getElementById('filial_detalhe_cep').value.trim(), rua: document.getElementById('filial_detalhe_rua').value.trim(), bairro: document.getElementById('filial_detalhe_bairro').value.trim(), cidade: document.getElementById('filial_detalhe_cidade').value.trim(), estado: document.getElementById('filial_detalhe_estado').value.trim(), localizacao: lat && lon ? `POINT(${lon} ${lat})` : null };
+        const result = filialId ? await db.from('filiais_clientes').update(dados).eq('id', filialId) : await db.from('filiais_clientes').insert([dados]);
+        if (result.error) Swal.fire('Erro', result.error.message, 'error'); else { Swal.fire('Sucesso', 'Filial salva.', 'success'); limparFormularioFilial(); carregarFiliaisClienteDetalhe(clienteId); }
+    });
+}
+
+async function carregarFiliaisClienteDetalhe(clienteId) {
+    const tabela = document.getElementById('tabelaFiliaisCliente'); if (!tabela) return;
+    const { data, error } = await db.from('filiais_clientes').select('*').eq('cliente_id', clienteId).order('nome');
+    if (error) { tabela.innerHTML = `<tr><td colspan="4" class="text-danger">${escapeHTML(error.message)}</td></tr>`; return; }
+    tabela.innerHTML = (data || []).map(f => `<tr><td><strong>${escapeHTML(f.nome)}</strong></td><td>${escapeHTML([f.rua, f.bairro, f.cidade, f.estado].filter(Boolean).join(', ') || '-')}</td><td>${f.ativo ? 'Ativa' : 'Inativa'}</td><td class="text-end"><button class="btn btn-sm btn-outline-primary me-1" onclick="editarFilialCliente(${f.id})">Editar</button><button class="btn btn-sm btn-outline-danger" onclick="excluirFilialCliente(${f.id}, ${clienteId})">Excluir</button></td></tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">Nenhuma filial cadastrada.</td></tr>';
+    window.filiaisClienteDetalheCache = data || [];
+}
+
+window.editarFilialCliente = function(id) {
+    const f = (window.filiaisClienteDetalheCache || []).find(item => item.id === id); if (!f) return;
+    const set = (campo, valor) => { const el = document.getElementById(campo); if (el) el.value = valor || ''; };
+    set('filial_detalhe_id', f.id); set('filial_detalhe_nome', f.nome); set('filial_detalhe_cep', f.cep); set('filial_detalhe_rua', f.rua); set('filial_detalhe_bairro', f.bairro); set('filial_detalhe_cidade', f.cidade); set('filial_detalhe_estado', f.estado);
+    const botao = document.querySelector('#formFilialCliente button[type="submit"]'); if (botao) botao.textContent = 'Atualizar filial';
+};
+
+window.excluirFilialCliente = async function(id, clienteId) {
+    const confirmacao = await Swal.fire({ title: 'Excluir filial?', text: 'Os chamados antigos continuarão preservados.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Excluir', cancelButtonText: 'Cancelar' });
+    if (!confirmacao.isConfirmed) return;
+    const { error } = await db.from('filiais_clientes').delete().eq('id', id);
+    if (error) Swal.fire('Erro', error.message, 'error'); else carregarFiliaisClienteDetalhe(clienteId);
+};
+
 async function carregarListaClientes() {
     const tbody = document.getElementById('tabelaClientesBody');
     if (!tbody) return;
@@ -664,18 +758,7 @@ async function carregarListaClientes() {
 }
 
 function editarCliente(id) {
-    const c = listaClientesCache.find(item => item.id === id);
-    if (!c) return;
-
-    document.getElementById('cli_id').value = c.id;
-    document.getElementById('cli_nome').value = c.nome || '';
-    document.getElementById('cli_documento').value = c.documento || '';
-    document.getElementById('cli_contato').value = c.contato || '';
-    document.getElementById('cli_email').value = c.email || '';
-
-    document.getElementById('formClienteTitulo').textContent = 'Editar Cliente';
-    document.getElementById('btnSalvarCliente').textContent = 'Atualizar Cliente';
-    document.getElementById('btnCancelarCliente').style.display = 'block';
+    window.location.href = `cliente-detalhes.html?id=${encodeURIComponent(id)}`;
 }
 
 function cancelarEdicaoCliente() {
