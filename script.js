@@ -632,7 +632,7 @@ if (formCliente) {
                 if (conviteErro && conviteErro.context?.json) {
                     try {
                         const detalhe = await conviteErro.context.json();
-                        conviteErro.message = [detalhe?.etapa ? `Etapa: ${detalhe.etapa}` : '', detalhe?.error || detalhe?.message || ''].filter(Boolean).join(' — ') || conviteErro.message;
+                        conviteErro.message = [detalhe?.etapa ? `Etapa: ${detalhe.etapa}` : '', detalhe?.error || detalhe?.message || '', detalhe?.code ? `Código: ${detalhe.code}` : '', detalhe?.details || '', detalhe?.hint || ''].filter(Boolean).join(' — ') || conviteErro.message;
                     } catch (_) { /* mantém a mensagem padrão */ }
                 }
                 if (conviteErro && typeof conviteErro.message === 'object') {
@@ -1911,7 +1911,7 @@ async function inicializarTelaUsuarios() {
             if (error.context?.json) {
                 try {
                     const detalhe = await error.context.json();
-                    mensagem = [detalhe?.etapa ? `Etapa: ${detalhe.etapa}` : '', detalhe?.error || detalhe?.message || ''].filter(Boolean).join(' — ') || mensagem;
+                    mensagem = [detalhe?.etapa ? `Etapa: ${detalhe.etapa}` : '', detalhe?.error || detalhe?.message || '', detalhe?.code ? `Código: ${detalhe.code}` : '', detalhe?.details || '', detalhe?.hint || ''].filter(Boolean).join(' — ') || mensagem;
                 } catch (_) { /* mantém a mensagem padrão */ }
             }
             Swal.fire('Erro ao enviar convite', mensagem, 'error');
