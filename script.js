@@ -629,6 +629,12 @@ if (formCliente) {
             if (!error && email && res.data?.id) {
                 const convite = await db.functions.invoke('convidar-usuario', { body: { nome, email, perfil: 'cliente', cliente_id: res.data.id } });
                 conviteErro = convite.error || null;
+                if (conviteErro && conviteErro.context?.json) {
+                    try {
+                        const detalhe = await conviteErro.context.json();
+                        conviteErro.message = detalhe?.error || detalhe?.message || conviteErro.message;
+                    } catch (_) { /* mantém a mensagem padrão */ }
+                }
             }
         }
 
@@ -1896,8 +1902,16 @@ async function inicializarTelaUsuarios() {
         const clienteId = document.getElementById('usuario_cliente_id')?.value || null;
         if (perfil === 'cliente' && !clienteId) { Swal.fire('Atenção', 'Selecione o cliente que será vinculado a este acesso.', 'warning'); return; }
         const { error } = await db.functions.invoke('convidar-usuario', { body: { nome, email, perfil, cliente_id: clienteId } });
-        if (error) Swal.fire('Erro', error.message, 'error');
-        else { Swal.fire('Sucesso', 'Convite enviado por e-mail.', 'success'); form.reset(); }
+        if (error) {
+            let mensagem = error.message || 'Não foi possível enviar o convite.';
+            if (error.context?.json) {
+                try {
+                    const detalhe = await error.context.json();
+                    mensagem = detalhe?.error || detalhe?.message || mensagem;
+                } catch (_) { /* mantém a mensagem padrão */ }
+            }
+            Swal.fire('Erro ao enviar convite', mensagem, 'error');
+        } else { Swal.fire('Sucesso', 'Convite enviado por e-mail.', 'success'); form.reset(); }
     });
 }
 
