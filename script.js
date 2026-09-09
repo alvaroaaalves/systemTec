@@ -625,9 +625,10 @@ if (formCliente) {
         } else {
             const res = await db.from('clientes').insert([dadosCliente]).select('id').single();
             error = res.error;
+            let conviteErro = null;
             if (!error && email && res.data?.id) {
                 const convite = await db.functions.invoke('convidar-usuario', { body: { nome, email, perfil: 'cliente', cliente_id: res.data.id } });
-                if (convite.error) console.warn('Cliente salvo, mas convite não enviado:', convite.error);
+                conviteErro = convite.error || null;
             }
         }
 
@@ -636,7 +637,13 @@ if (formCliente) {
         if (error) {
             Swal.fire('Erro', error.message, 'error');
         } else {
-            Swal.fire('Sucesso', 'Cliente salvo com sucesso!', 'success');
+            if (conviteErro) {
+                Swal.fire('Cliente salvo', `Cliente cadastrado, mas o convite não foi enviado: ${conviteErro.message || 'verifique a configuração do convite.'}`, 'warning');
+            } else if (!id && email) {
+                Swal.fire('Sucesso', 'Cliente cadastrado e convite enviado para o e-mail informado.', 'success');
+            } else {
+                Swal.fire('Sucesso', 'Cliente salvo com sucesso!', 'success');
+            }
             cancelarEdicaoCliente();
             carregarListaClientes();
         }
