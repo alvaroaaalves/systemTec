@@ -875,52 +875,89 @@ function selecionarSugestaoChamado(local) {
     document.getElementById('sugestoesChamado').innerHTML = '';
 }
 
+let filiaisChamadoAdminCache = [];
+
+async function carregarFiliaisChamadoAdmin(clienteNome) {
+    const select = document.getElementById('chamado_filial');
+    const ajuda = document.getElementById('ajudaFilialChamado');
+    if (!select) return;
+    select.innerHTML = '<option value="">Carregando filiais...</option>';
+    select.disabled = true;
+    const { data: cliente } = await db.from('clientes').select('id').eq('nome', clienteNome).maybeSingle();
+    if (!cliente) {
+        select.innerHTML = '<option value="">Cliente não encontrado</option>';
+        return;
+    }
+    const { data, error } = await db.from('filiais_clientes').select('id, nome, rua, bairro, cidade, estado, localizacao, ativo').eq('cliente_id', cliente.id).order('nome');
+    if (error) {
+        select.innerHTML = '<option value="">Erro ao carregar filiais</option>';
+        if (ajuda) ajuda.textContent = error.message;
+        return;
+    }
+    filiaisChamadoAdminCache = (data || []).filter(f => f.ativo !== false);
+    select.innerHTML = '<option value="">Selecione a filial...</option>';
+    filiaisChamadoAdminCache.forEach(f => {
+        const option = document.createElement('option');
+        option.value = f.id;
+        option.textContent = f.nome;
+        select.appendChild(option);
+    });
+    select.disabled = false;
+    if (ajuda) ajuda.textContent = filiaisChamadoAdminCache.length ? 'A filial define o endereço do atendimento.' : 'Este cliente ainda não possui filiais cadastradas.';
+}
+
+function preencherEnderecoChamadoAdmin(filialId) {
+    const filial = filiaisChamadoAdminCache.find(f => String(f.id) === String(filialId));
+    const campos = { rua: 'chamado_rua', bairro: 'chamado_bairro', cidade: 'chamado_cidade', estado: 'chamado_estado' };
+    Object.entries(campos).forEach(([campo, id]) => { const el = document.getElementById(id); if (el) el.value = filial?.[campo] || ''; });
+    const localizacao = filial?.localizacao || '';
+    const coordenadas = extrairCoordenadasLocalizacao(localizacao);
+    const busca = document.getElementById('chamado_busca_endereco');
+    if (document.getElementById('chamado_lat')) document.getElementById('chamado_lat').value = coordenadas?.lat || '';
+    if (document.getElementById('chamado_lon')) document.getElementById('chamado_lon').value = coordenadas?.lon || '';
+    const resumo = document.getElementById('resumoEnderecoChamado');
+    const texto = document.getElementById('textoEnderecoChamado');
+    const endereco = [filial?.rua, filial?.bairro, filial?.cidade, filial?.estado].filter(Boolean).join(', ');
+    if (texto) texto.textContent = endereco || 'Endereço não informado';
+    if (resumo) resumo.style.display = filial ? 'block' : 'none';
+    if (busca) busca.value = endereco;
+}
+
 const formChamado = document.getElementById('formChamado');
 if (formChamado) {
+    const clienteSelect = document.getElementById('chamado_cliente');
+    const filialSelect = document.getElementById('chamado_filial');
+    clienteSelect?.addEventListener('change', () => carregarFiliaisChamadoAdmin(clienteSelect.value));
+    filialSelect?.addEventListener('change', () => preencherEnderecoChamadoAdmin(filialSelect.value));
     formChamado.addEventListener('submit', async (e) => {
         e.preventDefault();
         const botao = formChamado.querySelector('button[type="submit"]');
-        definirCarregando(botao, true, 'Cadastrando...');
-
-        const lat = document.getElementById('chamado_busca_endereco').dataset.lat;
-        const lon = document.getElementById('chamado_busca_endereco').dataset.lon;
-        const pontoGeo = (lat && lon) ? `POINT(${lon} ${lat})` : null;
-
+        definirCarregando(botao, true, 'Abrindo...');
+        const clienteNome = clienteSelect?.value || '';
+        const filialId = filialSelect?.value || '';
+        const filial = filiaisChamadoAdminCache.find(f => String(f.id) === String(filialId));
+        const lat = document.getElementById('chamado_lat')?.value;
+        const lon = document.getElementById('chamado_lon')?.value;
+        const pontoGeo = (lat && lon) ? `POINT(${lon} ${lat})` : (filial?.localizacao || null);
         try {
+            const { data: cliente } = await db.from('clientes').select('id, nome').eq('nome', clienteNome).maybeSingle();
+            if (!cliente || !filial) { Swal.fire('Atenção', 'Selecione um cliente e uma filial válidos.', 'warning'); return; }
+            const descricao = document.getElementById('chamado_problema').value.trim();
             const { data: novoChamado, error } = await db.from('chamados').insert([{
-                cliente: document.getElementById('chamado_cliente').value,
-                filial: document.getElementById('chamado_filial').value,
-                titulo: document.getElementById('chamado_titulo').value,
-                estado: document.getElementById('chamado_estado').value,
-                cidade: document.getElementById('chamado_cidade').value,
-                bairro: document.getElementById('chamado_bairro').value,
-                rua: document.getElementById('chamado_rua').value,
-                localizacao: pontoGeo,
-                tecnico_id: document.getElementById('chamado_tecnico').value || null,
-                prioridade: document.getElementById('chamado_prioridade')?.value || 'Média',
-                prazo: document.getElementById('chamado_prazo')?.value || null,
-                status: 'Criado'
-            }]).select();
-
-            if (error) {
-                Swal.fire('Erro', error.message, 'error');
-            } else {
-                if (novoChamado && novoChamado.length > 0) {
-                    await db.from('historico_chamados').insert([{
-                        chamado_id: novoChamado[0].id,
-                        observacao: `[Sistema] Chamado criado e registrado no sistema. Descrição inicial: ${document.getElementById('chamado_problema').value.trim() || '(não informada)'}`,
-                        ...(await obterDadosUsuarioHistorico())
-                    }]);
-                }
-                Swal.fire('Sucesso', 'Chamado criado com sucesso!', 'success');
-                formChamado.reset();
-                carregarChamadosRecentes();
-            }
-        } catch (err) {
-            console.error(err);
-        } finally {
-            definirCarregando(botao, false);
-        }
+                cliente_id: cliente.id, cliente: cliente.nome, filial_id: filial.id, filial: filial.nome,
+                titulo: document.getElementById('chamado_titulo').value.trim(), descricao,
+                estado: filial.estado || '', cidade: filial.cidade || '', bairro: filial.bairro || '', rua: filial.rua || '', localizacao: pontoGeo,
+                prioridade: document.getElementById('chamado_prioridade')?.value || 'Média', prazo: document.getElementById('chamado_prazo')?.value || null, status: 'Criado'
+            }]).select().single();
+            if (error) { Swal.fire('Erro', error.message, 'error'); return; }
+            if (novoChamado) await db.from('historico_chamados').insert([{ chamado_id: novoChamado.id, observacao: `[Sistema] Chamado criado e registrado no sistema. Descrição inicial: ${descricao}`, ...(await obterDadosUsuarioHistorico()) }]);
+            Swal.fire('Sucesso', 'Chamado criado com sucesso!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalNovoChamadoAdmin'))?.hide();
+            formChamado.reset();
+            if (filialSelect) { filialSelect.innerHTML = '<option value="">Selecione o cliente primeiro...</option>'; filialSelect.disabled = true; }
+            carregarChamadosRecentes();
+        } catch (err) { console.error(err); Swal.fire('Erro', err.message || 'Não foi possível abrir o chamado.', 'error'); }
+        finally { definirCarregando(botao, false); }
     });
 }
 
