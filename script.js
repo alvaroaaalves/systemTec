@@ -9,6 +9,9 @@ let listaClientesCache = [];
 let mapaDashboard = null;
 let marcadoresDashboard = null;
 let mapaDetalhe = null; // Mapa da tela de detalhes do chamado
+let clientePortalAtual = null;
+let filiaisPortalCache = [];
+let filiaisDetalheCache = [];
 
 document.addEventListener("DOMContentLoaded", async () => {
     const { data: { session } } = await db.auth.getSession();
@@ -942,6 +945,7 @@ async function carregarClientesSelect(selectId) {
     (data || []).forEach(cliente => {
         const option = document.createElement('option');
         option.value = cliente.nome;
+        option.dataset.clienteId = cliente.id;
         option.textContent = cliente.nome;
         select.appendChild(option);
     });
@@ -1215,7 +1219,9 @@ async function inicializarDetalhesChamado() {
             
             let dadosUpdate = {
                 cliente: document.getElementById('detalhe_cliente').value,
-                filial: document.getElementById('detalhe_filial').value,
+                cliente_id: document.getElementById('detalhe_cliente').selectedOptions?.[0]?.dataset?.clienteId || null,
+                filial_id: document.getElementById('detalhe_filial').value || null,
+                filial: document.getElementById('detalhe_filial').selectedOptions?.[0]?.dataset?.nome || '',
                 titulo: document.getElementById('detalhe_titulo').value,
                 status: document.getElementById('detalhe_status').value,
                 prioridade: document.getElementById('detalhe_prioridade')?.value || 'Média',
@@ -1240,7 +1246,8 @@ async function inicializarDetalhesChamado() {
             } else {
                 const dadosAtuais = {
                     cliente: document.getElementById('detalhe_cliente')?.value || '',
-                    filial: document.getElementById('detalhe_filial')?.value || '',
+                    filial_id: document.getElementById('detalhe_filial')?.value || '',
+                    filial: document.getElementById('detalhe_filial')?.selectedOptions?.[0]?.dataset?.nome || '',
                     titulo: document.getElementById('detalhe_titulo')?.value || '',
                     status: document.getElementById('detalhe_status')?.value || '',
                     prioridade: document.getElementById('detalhe_prioridade')?.value || '',
@@ -1330,6 +1337,59 @@ async function carregarTecnicosSelectDetalhe() {
     });
 }
 
+async function carregarFiliaisSelectDetalhe(clienteId, filialIdSelecionada, filialLegada = '') {
+    const select = document.getElementById('detalhe_filial');
+    if (!select) return;
+    if (!clienteId) {
+        select.innerHTML = '<option value="">Cliente sem vínculo de filial</option>';
+        return;
+    }
+    const { data, error } = await db.from('filiais_clientes').select('id, nome, rua, bairro, cidade, estado, cep, ativo').eq('cliente_id', clienteId).order('nome');
+    if (error) {
+        console.error('Erro ao carregar filiais do detalhe:', error);
+        select.innerHTML = '<option value="">Erro ao carregar filiais</option>';
+        return;
+    }
+    filiaisDetalheCache = data || [];
+    select.innerHTML = '<option value="">Selecione a filial...</option>';
+    filiaisDetalheCache.filter(f => f.ativo !== false).forEach(f => {
+        const option = document.createElement('option');
+        option.value = f.id;
+        option.dataset.nome = f.nome || '';
+        option.textContent = f.nome || `Filial #${f.id}`;
+        select.appendChild(option);
+    });
+    if (filialIdSelecionada && filiaisDetalheCache.some(f => String(f.id) === String(filialIdSelecionada))) {
+        select.value = String(filialIdSelecionada);
+    } else if (filialLegada) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.dataset.nome = filialLegada;
+        option.textContent = `${filialLegada} (cadastro antigo)`;
+        option.selected = true;
+        select.appendChild(option);
+    }
+}
+
+function preencherEnderecoDoFilialDetalhe(filialId) {
+    const filial = filiaisDetalheCache.find(f => String(f.id) === String(filialId));
+    const rua = document.getElementById('detalhe_rua');
+    const bairro = document.getElementById('detalhe_bairro');
+    const cidade = document.getElementById('detalhe_cidade');
+    const estado = document.getElementById('detalhe_estado');
+    if (!filial) {
+        if (rua) rua.value = '';
+        if (bairro) bairro.value = '';
+        if (cidade) cidade.value = '';
+        if (estado) estado.value = '';
+        return;
+    }
+    if (rua) rua.value = filial.rua || '';
+    if (bairro) bairro.value = filial.bairro || '';
+    if (cidade) cidade.value = filial.cidade || '';
+    if (estado) estado.value = filial.estado || '';
+}
+
 async function carregarDadosChamadoUnico(id) {
     const { data, error } = await db.from('chamados').select('*').eq('id', id).single();
     if (error || !data) {
@@ -1343,7 +1403,25 @@ async function carregarDadosChamadoUnico(id) {
         if (subtitulo) subtitulo.textContent = `ID: ${data.id}`;
     }
     if (document.getElementById('detalhe_cliente')) document.getElementById('detalhe_cliente').value = data.cliente || '';
-    if (document.getElementById('detalhe_filial')) document.getElementById('detalhe_filial').value = data.filial || '';
+    const clienteSelecionado = document.getElementById('detalhe_cliente')?.selectedOptions?.[0];
+    const clienteIdDoChamado = data.cliente_id || clienteSelecionado?.dataset?.clienteId || null;
+    const clienteDetalhe = document.getElementById('detalhe_cliente');
+    if (clienteDetalhe && !clienteDetalhe.dataset.filialConfigurada) {
+        clienteDetalhe.dataset.filialConfigurada = 'true';
+        clienteDetalhe.addEventListener('change', async () => {
+            const option = clienteDetalhe.selectedOptions?.[0];
+            await carregarFiliaisSelectDetalhe(option?.dataset?.clienteId || null, null, '');
+            const filial = document.getElementById('detalhe_filial');
+            if (filial) filial.value = '';
+            preencherEnderecoDoFilialDetalhe('');
+        });
+    }
+    await carregarFiliaisSelectDetalhe(clienteIdDoChamado, data.filial_id, data.filial);
+    const seletorFilialDetalhe = document.getElementById('detalhe_filial');
+    if (seletorFilialDetalhe && !seletorFilialDetalhe.dataset.configurado) {
+        seletorFilialDetalhe.dataset.configurado = 'true';
+        seletorFilialDetalhe.addEventListener('change', () => preencherEnderecoDoFilialDetalhe(seletorFilialDetalhe.value));
+    }
     if (document.getElementById('detalhe_titulo')) document.getElementById('detalhe_titulo').value = data.titulo || '';
     if (document.getElementById('detalhe_status')) document.getElementById('detalhe_status').value = data.status || 'Criado';
     if (document.getElementById('detalhe_prioridade')) document.getElementById('detalhe_prioridade').value = data.prioridade || 'Média';
@@ -1604,70 +1682,91 @@ function sugerirEnderecosNovaFilial(termo) {
     }, 400);
 }
 
+async function obterClientePortalAtual() {
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return null;
+    const { data, error } = await db.from('clientes').select('id, nome, sla_horas').eq('usuario_id', user.id).maybeSingle();
+    if (error) throw error;
+    return data || null;
+}
+
+function preencherFormularioFilialPortal(filial = {}) {
+    const valores = { portal_filial_id: filial.id || '', portal_filial_nome: filial.nome || '', portal_filial_cep: filial.cep || '', portal_filial_rua: filial.rua || '', portal_filial_bairro: filial.bairro || '', portal_filial_cidade: filial.cidade || '', portal_filial_estado: filial.estado || '' };
+    Object.entries(valores).forEach(([id, value]) => { const el = document.getElementById(id); if (el) el.value = value; });
+    const coords = extrairCoordenadasLocalizacao(filial.localizacao);
+    document.getElementById('portal_filial_lat').value = coords?.lat || '';
+    document.getElementById('portal_filial_lon').value = coords?.lon || '';
+    const titulo = document.getElementById('tituloModalFilialPortal');
+    if (titulo) titulo.textContent = filial.id ? 'Editar filial' : 'Cadastrar filial';
+}
+
+window.abrirNovaFilialPortal = function() {
+    preencherFormularioFilialPortal();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNovaFilialPortal')).show();
+};
+
+window.editarFilialPortal = function(id) {
+    const filial = filiaisPortalCache.find(f => String(f.id) === String(id));
+    if (!filial) return;
+    preencherFormularioFilialPortal(filial);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modalNovaFilialPortal')).show();
+};
+
+async function carregarFiliaisPortal(clienteId) {
+    const select = document.getElementById('cliente_chamado_filial_id');
+    const lista = document.getElementById('listaFiliaisPortal');
+    const { data, error } = await db.from('filiais_clientes').select('id, nome, rua, bairro, cidade, estado, cep, localizacao, ativo').eq('cliente_id', clienteId).order('nome');
+    if (error) {
+        if (select) select.innerHTML = '<option value="">Erro ao carregar filiais</option>';
+        if (lista) lista.innerHTML = `<div class="text-danger small">${escapeHTML(error.message)}</div>`;
+        return;
+    }
+    filiaisPortalCache = data || [];
+    if (select) {
+        select.innerHTML = '<option value="">Selecione a filial...</option>';
+        filiaisPortalCache.filter(f => f.ativo !== false).forEach(f => { const option = document.createElement('option'); option.value = f.id; option.textContent = f.nome; select.appendChild(option); });
+        select.innerHTML += '<option value="__nova__">+ Cadastrar nova filial</option>';
+    }
+    if (lista) {
+        lista.innerHTML = filiaisPortalCache.length ? filiaisPortalCache.map(f => `<div class="border rounded p-2 ${f.ativo === false ? 'opacity-50' : ''}"><div class="d-flex justify-content-between align-items-start gap-2"><div><strong>${escapeHTML(f.nome)}</strong><div class="small text-muted">${escapeHTML([f.rua, f.bairro, f.cidade, f.estado].filter(Boolean).join(', ') || 'Endereço não informado')}</div></div><button class="btn btn-sm btn-outline-primary" type="button" onclick="editarFilialPortal(${f.id})">Editar</button></div></div>`).join('') : '<div class="text-muted small">Nenhuma filial cadastrada. Cadastre a primeira para abrir chamados.</div>';
+    }
+}
+
+let timerBuscaPortalFilial = null;
+function sugerirEnderecosPortalFilial(termo) {
+    clearTimeout(timerBuscaPortalFilial);
+    const container = document.getElementById('sugestoesPortalFilial');
+    if (!container) return;
+    if (!termo || termo.length < 3) { container.innerHTML = ''; return; }
+    timerBuscaPortalFilial = setTimeout(async () => {
+        try {
+            const resposta = await fetch(`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&q=${encodeURIComponent(termo)}`);
+            const locais = await resposta.json();
+            container.innerHTML = '';
+            (locais || []).forEach(local => { const item = document.createElement('button'); item.type = 'button'; item.className = 'list-group-item list-group-item-action small text-start'; item.textContent = local.display_name; item.addEventListener('mousedown', event => { event.preventDefault(); const a = local.address || {}; document.getElementById('portal_filial_rua').value = [a.road || a.street, a.house_number].filter(Boolean).join(', ') || local.display_name; document.getElementById('portal_filial_bairro').value = a.suburb || a.neighbourhood || a.city_district || ''; document.getElementById('portal_filial_cidade').value = a.city || a.town || a.municipality || ''; document.getElementById('portal_filial_estado').value = a.state || ''; document.getElementById('portal_filial_lat').value = local.lat || ''; document.getElementById('portal_filial_lon').value = local.lon || ''; container.innerHTML = ''; }); container.appendChild(item); });
+        } catch (error) { console.error('Erro na busca de endereço da filial:', error); }
+    }, 400);
+}
+
 async function carregarPortalCliente() {
     const tabela = document.getElementById('tabelaChamadosCliente');
     const form = document.getElementById('formNovoChamadoCliente');
-    const { data: { user } } = await db.auth.getUser();
-    if (!user) return;
-    const { data: cliente, error: clienteError } = await db.from('clientes').select('id, nome, sla_horas').eq('usuario_id', user.id).maybeSingle();
-    if (clienteError || !cliente) {
-        if (tabela) tabela.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Cliente não vinculado a este usuário.</td></tr>';
-        return;
-    }
-    const nome = document.getElementById('clientePortalNome');
-    if (nome) nome.textContent = `${cliente.nome} — SLA: ${cliente.sla_horas || 24} horas`;
+    try { clientePortalAtual = await obterClientePortalAtual(); } catch (error) { if (tabela) tabela.innerHTML = `<tr><td colspan="6" class="text-danger text-center">${escapeHTML(error.message)}</td></tr>`; return; }
+    const cliente = clientePortalAtual;
+    if (!cliente) { if (tabela) tabela.innerHTML = '<tr><td colspan="6" class="text-danger text-center">Cliente não vinculado a este usuário.</td></tr>'; return; }
+    const nome = document.getElementById('clientePortalNome'); if (nome) nome.textContent = `${cliente.nome} — SLA: ${cliente.sla_horas || 24} horas`;
+    const nomeCurto = document.getElementById('clientePortalNomeCurto'); if (nomeCurto) nomeCurto.textContent = (cliente.nome || 'cliente').split(' ')[0];
     await Promise.all([carregarProblemasPortal(), carregarFiliaisPortal(cliente.id)]);
-    const seletorFilial = document.getElementById('cliente_chamado_filial_id');
-    const blocoNovaFilial = document.getElementById('formNovaFilialCliente');
-    if (seletorFilial && !seletorFilial.dataset.configurado) {
-        seletorFilial.dataset.configurado = 'true';
-        seletorFilial.addEventListener('change', () => {
-            if (blocoNovaFilial) blocoNovaFilial.style.display = seletorFilial.value === '__nova__' ? 'block' : 'none';
-        });
-    }
     const { data: chamados, error } = await db.from('chamados').select('id, titulo, descricao, filial, filial_id, problemas(nome), filiais_clientes(nome), status, criado_em').eq('cliente_id', cliente.id).order('criado_em', { ascending: false });
-    if (tabela) tabela.innerHTML = error ? `<tr><td colspan="6" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((chamados || []).map(c => `<tr><td>#${c.id}</td><td>${escapeHTML(c.problemas?.nome || c.titulo || '-')}</td><td>${escapeHTML(c.filiais_clientes?.nome || c.filial || '-')}</td><td><span class="badge ${obterBadgeStatus(c.status)}">${escapeHTML(c.status)}</span></td><td>${escapeHTML(new Date(c.criado_em).toLocaleString('pt-BR'))}</td><td><a class="btn btn-sm btn-outline-primary" href="detalhes-chamado.html?id=${c.id}">Ver</a></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center">Nenhum chamado encontrado.</td></tr>');
-    if (form && !form.dataset.configurado) {
-        form.dataset.configurado = 'true';
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const problemaId = document.getElementById('cliente_chamado_problema')?.value;
-            const filialSelecionada = document.getElementById('cliente_chamado_filial_id')?.value;
-            const descricao = document.getElementById('cliente_chamado_descricao').value.trim();
-            if (!problemaId || !filialSelecionada || !descricao) { Swal.fire('Atenção', 'Informe problema, filial e descrição.', 'warning'); return; }
-            let filialId = filialSelecionada;
-            let filialNome = '';
-            if (filialSelecionada === '__nova__') {
-                filialNome = document.getElementById('nova_filial_nome').value.trim();
-                if (!filialNome) { Swal.fire('Atenção', 'Informe o nome da nova filial.', 'warning'); return; }
-                const novaFilial = {
-                    cliente_id: cliente.id, nome: filialNome,
-                    rua: document.getElementById('nova_filial_rua').value.trim(),
-                    bairro: document.getElementById('nova_filial_bairro').value.trim(),
-                    cidade: document.getElementById('nova_filial_cidade').value.trim(),
-                    estado: document.getElementById('nova_filial_estado').value.trim(),
-                    cep: document.getElementById('nova_filial_cep').value.trim(),
-                    localizacao: document.getElementById('nova_filial_lat').value && document.getElementById('nova_filial_lon').value ? `POINT(${document.getElementById('nova_filial_lon').value} ${document.getElementById('nova_filial_lat').value})` : null
-                };
-                const { data: filialCriada, error: filialError } = await db.from('filiais_clientes').insert([novaFilial]).select('id').single();
-                if (filialError) { Swal.fire('Erro', filialError.message, 'error'); return; }
-                filialId = filialCriada.id;
-            }
-            const prazo = new Date(Date.now() + (Number(cliente.sla_horas || 24) * 60 * 60 * 1000)).toISOString();
-            const { data: novo, error: novoError } = await db.from('chamados').insert([{
-                cliente_id: cliente.id, cliente: cliente.nome, problema_id: problemaId, filial_id: filialId,
-                filial: filialNome, titulo: descricao, descricao, status: 'Criado', prioridade: 'Média',
-                sla_horas_aplicado: Number(cliente.sla_horas || 24), prazo
-            }]).select('id').single();
-            if (novoError) { Swal.fire('Erro', novoError.message, 'error'); return; }
-            await db.from('historico_chamados').insert([{ chamado_id: novo.id, observacao: `[Sistema] Chamado aberto pelo cliente. Descrição: ${descricao}`, visivel_cliente: true, ...(await obterDadosUsuarioHistorico()) }]);
-            Swal.fire('Sucesso', 'Chamado aberto com sucesso.', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('modalNovoChamadoCliente'))?.hide();
-            form.reset();
-            if (blocoNovaFilial) blocoNovaFilial.style.display = 'none';
-            await carregarPortalCliente();
-        });
-    }
+    const lista = chamados || [];
+    const indicadores = { clienteDashTotal: lista.length, clienteDashAbertos: lista.filter(c => c.status === 'Criado').length, clienteDashAtendimento: lista.filter(c => c.status === 'Em Atendimento').length, clienteDashResolvidos: lista.filter(c => ['Resolvido', 'Validado'].includes(c.status)).length };
+    Object.entries(indicadores).forEach(([id, valor]) => { const el = document.getElementById(id); if (el) el.textContent = valor; });
+    if (tabela) tabela.innerHTML = error ? `<tr><td colspan="6" class="text-danger">${escapeHTML(error.message)}</td></tr>` : (lista.map(c => `<tr><td>#${c.id}</td><td>${escapeHTML(c.problemas?.nome || c.titulo || '-')}</td><td>${escapeHTML(c.filiais_clientes?.nome || c.filial || '-')}</td><td><span class="badge ${obterBadgeStatus(c.status)}">${escapeHTML(c.status)}</span></td><td>${escapeHTML(c.criado_em ? new Date(c.criado_em).toLocaleString('pt-BR') : '-')}</td><td><a class="btn btn-sm btn-outline-primary" href="detalhes-chamado.html?id=${c.id}">Ver</a></td></tr>`).join('') || '<tr><td colspan="6" class="text-muted text-center py-4">Nenhum chamado encontrado.</td></tr>');
+    const seletorFilial = document.getElementById('cliente_chamado_filial_id'); const blocoNovaFilial = document.getElementById('formNovaFilialCliente');
+    if (seletorFilial && !seletorFilial.dataset.configurado) { seletorFilial.dataset.configurado = 'true'; seletorFilial.addEventListener('change', () => { if (blocoNovaFilial) blocoNovaFilial.style.display = seletorFilial.value === '__nova__' ? 'block' : 'none'; }); }
+    const formFilial = document.getElementById('formFilialPortal');
+    if (formFilial && !formFilial.dataset.configurado) { formFilial.dataset.configurado = 'true'; formFilial.addEventListener('submit', async event => { event.preventDefault(); const id = document.getElementById('portal_filial_id').value; const dados = { cliente_id: cliente.id, nome: document.getElementById('portal_filial_nome').value.trim(), cep: document.getElementById('portal_filial_cep').value.trim(), rua: document.getElementById('portal_filial_rua').value.trim(), bairro: document.getElementById('portal_filial_bairro').value.trim(), cidade: document.getElementById('portal_filial_cidade').value.trim(), estado: document.getElementById('portal_filial_estado').value.trim(), localizacao: document.getElementById('portal_filial_lat').value && document.getElementById('portal_filial_lon').value ? `POINT(${document.getElementById('portal_filial_lon').value} ${document.getElementById('portal_filial_lat').value})` : null }; if (!dados.nome) return; const result = id ? await db.from('filiais_clientes').update(dados).eq('id', id).eq('cliente_id', cliente.id) : await db.from('filiais_clientes').insert([dados]); if (result.error) { Swal.fire('Erro', result.error.message, 'error'); return; } bootstrap.Modal.getInstance(document.getElementById('modalNovaFilialPortal'))?.hide(); formFilial.reset(); await carregarPortalCliente(); }); }
+    if (form && !form.dataset.configurado) { form.dataset.configurado = 'true'; form.addEventListener('submit', async event => { event.preventDefault(); const problemaId = document.getElementById('cliente_chamado_problema')?.value; const filialSelecionada = document.getElementById('cliente_chamado_filial_id')?.value; const descricao = document.getElementById('cliente_chamado_descricao').value.trim(); if (!problemaId || !filialSelecionada || !descricao) { Swal.fire('Atenção', 'Informe problema, filial e descrição.', 'warning'); return; } let filialId = filialSelecionada; let filialNome = filiaisPortalCache.find(f => String(f.id) === String(filialId))?.nome || ''; if (filialSelecionada === '__nova__') { filialNome = document.getElementById('nova_filial_nome').value.trim(); if (!filialNome) { Swal.fire('Atenção', 'Informe o nome da nova filial.', 'warning'); return; } const novaFilial = { cliente_id: cliente.id, nome: filialNome, rua: document.getElementById('nova_filial_rua').value.trim(), bairro: document.getElementById('nova_filial_bairro').value.trim(), cidade: document.getElementById('nova_filial_cidade').value.trim(), estado: document.getElementById('nova_filial_estado').value.trim(), cep: document.getElementById('nova_filial_cep').value.trim(), localizacao: document.getElementById('nova_filial_lat').value && document.getElementById('nova_filial_lon').value ? `POINT(${document.getElementById('nova_filial_lon').value} ${document.getElementById('nova_filial_lat').value})` : null }; const { data: filialCriada, error: filialError } = await db.from('filiais_clientes').insert([novaFilial]).select('id').single(); if (filialError) { Swal.fire('Erro', filialError.message, 'error'); return; } filialId = filialCriada.id; } const prazo = new Date(Date.now() + Number(cliente.sla_horas || 24) * 3600000).toISOString(); const { data: novo, error: novoError } = await db.from('chamados').insert([{ cliente_id: cliente.id, cliente: cliente.nome, problema_id: problemaId, filial_id: filialId, filial: filialNome, titulo: descricao, descricao, status: 'Criado', prioridade: 'Média', sla_horas_aplicado: Number(cliente.sla_horas || 24), prazo }]).select('id').single(); if (novoError) { Swal.fire('Erro', novoError.message, 'error'); return; } await db.from('historico_chamados').insert([{ chamado_id: novo.id, observacao: `[Sistema] Chamado aberto pelo cliente. Descrição: ${descricao}`, visivel_cliente: true, ...(await obterDadosUsuarioHistorico()) }]); Swal.fire('Sucesso', 'Chamado aberto com sucesso.', 'success'); bootstrap.Modal.getInstance(document.getElementById('modalNovoChamadoCliente'))?.hide(); form.reset(); if (blocoNovaFilial) blocoNovaFilial.style.display = 'none'; await carregarPortalCliente(); }); }
 }
 
 async function inicializarConfiguracoes() {
