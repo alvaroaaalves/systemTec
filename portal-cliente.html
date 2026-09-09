@@ -9,88 +9,27 @@
 </head>
 <body class="bg-light">
     <nav class="navbar navbar-dark bg-dark">
-        <div class="container-fluid">
-            <span class="navbar-brand fw-bold">systemTec | Área do Cliente</span>
-            <button class="btn btn-outline-light btn-sm" onclick="fazerLogout()">Sair</button>
-        </div>
+        <div class="container-fluid"><span class="navbar-brand fw-bold">systemTec | Área do Cliente</span><button class="btn btn-outline-light btn-sm" onclick="fazerLogout()">Sair</button></div>
     </nav>
-
     <main class="container my-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div>
-                <h3 class="mb-1">Meus chamados</h3>
-                <p class="text-muted mb-0" id="clientePortalNome">Carregando cliente...</p>
-            </div>
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+            <div><p class="text-uppercase text-primary small fw-bold mb-1">Portal do cliente</p><h2 class="mb-1">Olá, <span id="clientePortalNomeCurto">...</span></h2><p class="text-muted mb-0" id="clientePortalNome">Carregando cliente...</p></div>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNovoChamadoCliente">Abrir novo chamado</button>
         </div>
-
-        <div class="card shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr><th>ID</th><th>Problema</th><th>Filial</th><th>Status</th><th>Criado em</th><th></th></tr>
-                        </thead>
-                        <tbody id="tabelaChamadosCliente">
-                            <tr><td colspan="6" class="text-muted text-center">Carregando...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <section aria-label="Resumo dos chamados" class="row g-3 mb-4">
+            <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Total de chamados</div><div class="fs-2 fw-bold text-primary" id="clienteDashTotal">0</div><div class="small text-muted">Histórico da sua empresa</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Em aberto</div><div class="fs-2 fw-bold text-warning" id="clienteDashAbertos">0</div><div class="small text-muted">Aguardando atendimento</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Em atendimento</div><div class="fs-2 fw-bold text-info" id="clienteDashAtendimento">0</div><div class="small text-muted">Com a equipe técnica</div></div></div></div>
+            <div class="col-sm-6 col-xl-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="text-muted small">Resolvidos</div><div class="fs-2 fw-bold text-success" id="clienteDashResolvidos">0</div><div class="small text-muted">Resolvidos ou validados</div></div></div></div>
+        </section>
+        <div class="row g-4">
+            <div class="col-xl-8"><div class="card border-0 shadow-sm"><div class="card-header bg-white d-flex justify-content-between align-items-center py-3"><div><h5 class="mb-0">Meus chamados</h5><small class="text-muted">Acompanhe o andamento dos seus atendimentos</small></div><span class="badge text-bg-light" id="clienteDashUltimaAtualizacao">Atualizado agora</span></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>ID</th><th>Problema</th><th>Filial</th><th>Status</th><th>Criado em</th><th></th></tr></thead><tbody id="tabelaChamadosCliente"><tr><td colspan="6" class="text-muted text-center py-4">Carregando...</td></tr></tbody></table></div></div></div></div>
+            <div class="col-xl-4"><div class="card border-0 shadow-sm h-100"><div class="card-header bg-white d-flex justify-content-between align-items-center py-3"><div><h5 class="mb-0">Minhas filiais</h5><small class="text-muted">Endereços usados nos chamados</small></div><button class="btn btn-sm btn-outline-primary" type="button" onclick="abrirNovaFilialPortal()">Adicionar</button></div><div class="card-body"><div id="listaFiliaisPortal" class="vstack gap-2"><div class="text-muted small">Carregando...</div></div></div></div></div>
         </div>
     </main>
 
-    <div class="modal fade" id="modalNovoChamadoCliente" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Abrir novo chamado</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form id="formNovoChamadoCliente">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold" for="cliente_chamado_problema">Problema</label>
-                            <select id="cliente_chamado_problema" class="form-select" required>
-                                <option value="">Carregando problemas...</option>
-                            </select>
-                        </div>
+    <div class="modal fade" id="modalNovaFilialPortal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="tituloModalFilialPortal">Cadastrar filial</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formFilialPortal"><div class="modal-body"><input type="hidden" id="portal_filial_id"><div class="row g-3"><div class="col-md-6"><label class="form-label" for="portal_filial_nome">Nome da filial</label><input id="portal_filial_nome" class="form-control" required></div><div class="col-md-6"><label class="form-label" for="portal_filial_cep">CEP</label><input id="portal_filial_cep" class="form-control"></div><div class="col-md-8 position-relative"><label class="form-label" for="portal_filial_rua">Rua e número</label><input id="portal_filial_rua" class="form-control" onkeyup="sugerirEnderecosPortalFilial(this.value)"><div id="sugestoesPortalFilial" class="list-group position-absolute w-100 shadow-sm" style="z-index:1060"></div></div><div class="col-md-4"><label class="form-label" for="portal_filial_bairro">Bairro</label><input id="portal_filial_bairro" class="form-control"></div><div class="col-md-8"><label class="form-label" for="portal_filial_cidade">Cidade</label><input id="portal_filial_cidade" class="form-control"></div><div class="col-md-4"><label class="form-label" for="portal_filial_estado">Estado</label><input id="portal_filial_estado" class="form-control" maxlength="2"></div><input type="hidden" id="portal_filial_lat"><input type="hidden" id="portal_filial_lon"></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Salvar filial</button></div></form></div></div></div>
 
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold" for="cliente_chamado_filial_id">Filial</label>
-                            <select id="cliente_chamado_filial_id" class="form-select" required>
-                                <option value="">Carregando filiais...</option>
-                                <option value="__nova__">+ Cadastrar nova filial</option>
-                            </select>
-                        </div>
-
-                        <div id="formNovaFilialCliente" class="border rounded p-3 mb-3 bg-light" style="display:none;">
-                            <h6>Nova filial</h6>
-                            <div class="row g-2">
-                                <div class="col-md-6"><label class="form-label" for="nova_filial_nome">Nome da filial</label><input id="nova_filial_nome" class="form-control"></div>
-                                <div class="col-md-6"><label class="form-label" for="nova_filial_cep">CEP</label><input id="nova_filial_cep" class="form-control"></div>
-                                <div class="col-md-8"><label class="form-label" for="nova_filial_rua">Rua e número</label><input id="nova_filial_rua" class="form-control" onkeyup="sugerirEnderecosNovaFilial(this.value)"><div id="sugestoesNovaFilial" class="list-group position-absolute shadow-sm" style="z-index:1056"></div></div>
-                                <div class="col-md-4"><label class="form-label" for="nova_filial_bairro">Bairro</label><input id="nova_filial_bairro" class="form-control"></div>
-                                <div class="col-md-8"><label class="form-label" for="nova_filial_cidade">Cidade</label><input id="nova_filial_cidade" class="form-control"></div>
-                                <div class="col-md-4"><label class="form-label" for="nova_filial_estado">Estado</label><input id="nova_filial_estado" class="form-control"></div>
-                                <input type="hidden" id="nova_filial_lat"><input type="hidden" id="nova_filial_lon">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold" for="cliente_chamado_descricao">Descrição detalhada</label>
-                            <textarea id="cliente_chamado_descricao" class="form-control" rows="5" required></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer"><button type="submit" class="btn btn-primary">Enviar chamado</button></div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="script.js"></script>
-</body>
-</html>
+    <div class="modal fade" id="modalNovoChamadoCliente" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Abrir novo chamado</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="formNovoChamadoCliente"><div class="modal-body"><div class="mb-3"><label class="form-label fw-semibold" for="cliente_chamado_problema">Problema</label><select id="cliente_chamado_problema" class="form-select" required><option value="">Carregando problemas...</option></select></div><div class="mb-3"><label class="form-label fw-semibold" for="cliente_chamado_filial_id">Filial</label><select id="cliente_chamado_filial_id" class="form-select" required><option value="">Carregando filiais...</option><option value="__nova__">+ Cadastrar nova filial</option></select></div><div id="formNovaFilialCliente" class="border rounded p-3 mb-3 bg-light" style="display:none;"><h6>Nova filial</h6><div class="row g-2"><div class="col-md-6"><label class="form-label" for="nova_filial_nome">Nome da filial</label><input id="nova_filial_nome" class="form-control"></div><div class="col-md-6"><label class="form-label" for="nova_filial_cep">CEP</label><input id="nova_filial_cep" class="form-control"></div><div class="col-md-8"><label class="form-label" for="nova_filial_rua">Rua e número</label><input id="nova_filial_rua" class="form-control" onkeyup="sugerirEnderecosNovaFilial(this.value)"><div id="sugestoesNovaFilial" class="list-group position-absolute shadow-sm" style="z-index:1056"></div></div><div class="col-md-4"><label class="form-label" for="nova_filial_bairro">Bairro</label><input id="nova_filial_bairro" class="form-control"></div><div class="col-md-8"><label class="form-label" for="nova_filial_cidade">Cidade</label><input id="nova_filial_cidade" class="form-control"></div><div class="col-md-4"><label class="form-label" for="nova_filial_estado">Estado</label><input id="nova_filial_estado" class="form-control"></div><input type="hidden" id="nova_filial_lat"><input type="hidden" id="nova_filial_lon"></div></div><div class="mb-3"><label class="form-label fw-semibold" for="cliente_chamado_descricao">Descrição detalhada</label><textarea id="cliente_chamado_descricao" class="form-control" rows="5" required></textarea></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="submit" class="btn btn-primary">Enviar chamado</button></div></form></div></div></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script><script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="script.js"></script>
+</body></html>
