@@ -632,8 +632,11 @@ if (formCliente) {
                 if (conviteErro && conviteErro.context?.json) {
                     try {
                         const detalhe = await conviteErro.context.json();
-                        conviteErro.message = detalhe?.error || detalhe?.message || conviteErro.message;
+                        conviteErro.message = [detalhe?.etapa ? `Etapa: ${detalhe.etapa}` : '', detalhe?.error || detalhe?.message || ''].filter(Boolean).join(' — ') || conviteErro.message;
                     } catch (_) { /* mantém a mensagem padrão */ }
+                }
+                if (conviteErro && typeof conviteErro.message === 'object') {
+                    conviteErro.message = conviteErro.message.error || conviteErro.message.message || JSON.stringify(conviteErro.message);
                 }
             }
         }
@@ -644,7 +647,8 @@ if (formCliente) {
             Swal.fire('Erro', error.message, 'error');
         } else {
             if (conviteErro) {
-                Swal.fire('Cliente salvo', `Cliente cadastrado, mas o convite não foi enviado: ${conviteErro.message || 'verifique a configuração do convite.'}`, 'warning');
+                const conviteMensagem = typeof conviteErro.message === 'object' ? JSON.stringify(conviteErro.message) : (conviteErro.message || 'verifique a configuração do convite.');
+                Swal.fire('Cliente salvo', `Cliente cadastrado, mas o convite não foi enviado: ${conviteMensagem}`, 'warning');
             } else if (!id && email) {
                 Swal.fire('Sucesso', 'Cliente cadastrado e convite enviado para o e-mail informado.', 'success');
             } else {
@@ -1907,7 +1911,7 @@ async function inicializarTelaUsuarios() {
             if (error.context?.json) {
                 try {
                     const detalhe = await error.context.json();
-                    mensagem = detalhe?.error || detalhe?.message || mensagem;
+                    mensagem = [detalhe?.etapa ? `Etapa: ${detalhe.etapa}` : '', detalhe?.error || detalhe?.message || ''].filter(Boolean).join(' — ') || mensagem;
                 } catch (_) { /* mantém a mensagem padrão */ }
             }
             Swal.fire('Erro ao enviar convite', mensagem, 'error');
