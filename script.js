@@ -623,8 +623,12 @@ if (formCliente) {
             const res = await db.from('clientes').update(dadosCliente).eq('id', id);
             error = res.error;
         } else {
-            const res = await db.from('clientes').insert([dadosCliente]);
+            const res = await db.from('clientes').insert([dadosCliente]).select('id').single();
             error = res.error;
+            if (!error && email && res.data?.id) {
+                const convite = await db.functions.invoke('convidar-usuario', { body: { nome, email, perfil: 'cliente', cliente_id: res.data.id } });
+                if (convite.error) console.warn('Cliente salvo, mas convite não enviado:', convite.error);
+            }
         }
 
         definirCarregando(botao, false);
@@ -1865,6 +1869,14 @@ async function inicializarConfiguracoes() {
 async function inicializarTelaUsuarios() {
     const tabela = document.getElementById('tabelaUsuariosBody');
     const form = document.getElementById('formUsuario');
+    const perfilSelect = document.getElementById('usuario_perfil');
+    const campoCliente = document.getElementById('campoUsuarioCliente');
+    const clienteSelect = document.getElementById('usuario_cliente_id');
+    if (clienteSelect) {
+        const { data: clientes } = await db.from('clientes').select('id, nome, email').order('nome');
+        (clientes || []).forEach(cliente => { const option = document.createElement('option'); option.value = cliente.id; option.textContent = `${cliente.nome}${cliente.email ? ` — ${cliente.email}` : ''}`; clienteSelect.appendChild(option); });
+    }
+    perfilSelect?.addEventListener('change', () => { if (campoCliente) campoCliente.style.display = perfilSelect.value === 'cliente' ? 'block' : 'none'; if (clienteSelect) clienteSelect.required = perfilSelect.value === 'cliente'; });
     if (tabela) {
         const { data, error } = await db.from('perfis_usuario').select('id, nome, email, perfil, ativo').order('nome');
         tabela.innerHTML = error ? `<tr><td colspan="4" class="text-danger">${escapeHTML(error.message)}</td></tr>` : ((data || []).map(u => `<tr><td>${escapeHTML(u.nome)}</td><td>${escapeHTML(u.email)}</td><td>${escapeHTML(u.perfil)}</td><td>${u.ativo ? 'Ativo' : 'Inativo'}</td></tr>`).join('') || '<tr><td colspan="4" class="text-muted text-center">Nenhum usuário cadastrado.</td></tr>');
@@ -1874,7 +1886,9 @@ async function inicializarTelaUsuarios() {
         const nome = document.getElementById('usuario_nome').value.trim();
         const email = document.getElementById('usuario_email').value.trim().toLowerCase();
         const perfil = document.getElementById('usuario_perfil').value;
-        const { error } = await db.functions.invoke('convidar-usuario', { body: { nome, email, perfil } });
+        const clienteId = document.getElementById('usuario_cliente_id')?.value || null;
+        if (perfil === 'cliente' && !clienteId) { Swal.fire('Atenção', 'Selecione o cliente que será vinculado a este acesso.', 'warning'); return; }
+        const { error } = await db.functions.invoke('convidar-usuario', { body: { nome, email, perfil, cliente_id: clienteId } });
         if (error) Swal.fire('Erro', error.message, 'error');
         else { Swal.fire('Sucesso', 'Convite enviado por e-mail.', 'success'); form.reset(); }
     });
